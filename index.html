@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="am">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ደረሰኝ ፈጣን እጣ | DeresegnBot</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg: #0b1120;
+            --card: #1e293b;
+            --accent: #10b981;
+            --gold: #f59e0b;
+            --danger: #ef4444;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            padding-bottom: 80px;
+            max-width: 480px;
+            margin: 0 auto;
+            border-left: 1px solid #1e293b;
+            border-right: 1px solid #1e293b;
+            min-height: 100vh;
+        }
+
+        /* Header & Live Wallet */
+        .header {
+            background: #1e293b;
+            padding: 12px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .header h1 {
+            font-size: 15px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .wallet-pill {
+            background: #0f172a;
+            border: 1px solid var(--gold);
+            padding: 5px 10px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .wallet-pill strong {
+            color: var(--gold);
+            font-size: 13px;
+        }
+
+        .wallet-add {
+            background: var(--accent);
+            color: #fff;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 12px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Room Selector Pills (10, 50, 100, 300 Birr) */
+        .room-tabs {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .room-btn {
+            background: var(--card);
+            border: 1px solid #334155;
+            color: var(--text);
+            padding: 8px 4px;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .room-btn strong {
+            display: block;
+            font-size: 14px;
+        }
+
+        .room-btn span {
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        .room-btn.active {
+            background: var(--accent);
+            border-color: #34d399;
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        .room-btn.active span {
+            color: #e2e8f0;
+        }
+
+        /* Timer & Prize Banner */
+        .prize-banner {
+            padding: 14px;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .banner-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .timer-box {
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid var(--gold);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 14px;
+            color: #fde047;
+        }
+
+        .timer-box.urgent {
+            background: var(--danger);
+            color: #fff;
+            border-color: #fff;
+            animation: pulse 0.6s infinite alternate;
+        }
+
+        @keyframes pulse {
+            from {
+                transform: scale(1);
+            }
+
+            to {
+                transform: scale(1.06);
+            }
+        }
+
+        .prizes-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr 1fr;
+            gap: 6px;
+            text-align: center;
+        }
+
+        .prize-box {
+            background: rgba(0, 0, 0, 0.28);
+            padding: 7px;
+            border-radius: 10px;
+        }
+
+        .prize-box span {
+            display: block;
+            font-size: 10px;
+            color: #d1fae5;
+        }
+
+        .prize-box strong {
+            font-size: 13px;
+            color: #fde047;
+        }
+
+        /* Progress */
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 5px;
+        }
+
+        .progress-bar {
+            height: 7px;
+            background: #334155;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--gold);
+            transition: 0.3s;
+        }
+
+        /* Winner Announcement Overlay */
+        .winner-alert {
+            display: none;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #000;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            text-align: center;
+            font-weight: bold;
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
+        }
+
+        /* Dynamic Slots Grid */
+        .numbers-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .slot {
+            background: var(--card);
+            border: 2px solid #334155;
+            border-radius: 10px;
+            padding: 8px 3px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+
+        .slot .num {
+            font-size: 15px;
+            font-weight: 800;
+            display: block;
+        }
+
+        .slot .owner {
+            font-size: 10px;
+            color: var(--accent);
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .slot.taken {
+            background: #091e1a;
+            border-color: #059669;
+            cursor: not-allowed;
+        }
+
+        .slot.taken .owner {
+            color: #34d399;
+            font-weight: 600;
+        }
+
+        .slot.selected {
+            background: #fef3c7;
+            border-color: var(--gold);
+            color: #000;
+            transform: scale(1.03);
+        }
+
+        .slot.selected .owner {
+            color: #b45309;
+            font-weight: bold;
+        }
+
+        .slot.winner-glow {
+            background: var(--gold) !important;
+            color: #000 !important;
+            border-color: #fff !important;
+            transform: scale(1.08);
+            box-shadow: 0 0 15px var(--gold);
+        }
+
+        .slot.winner-glow .owner {
+            color: #000 !important;
+            font-weight: 900;
+        }
+
+        .btn-main {
+            width: 100%;
+            padding: 13px;
+            border: none;
+            border-radius: 12px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+
+        /* Wallet & Cards */
+        .info-card {
+            background: var(--card);
+            border: 1px solid #334155;
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: #fff;
+            margin: 6px 0 10px;
+            font-size: 13px;
+        }
+
+        .tx-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #334155;
+            font-size: 12px;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-width: 480px;
+            margin: 0 auto;
+            background: #1e293b;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            border-top: 1px solid #334155;
+            z-index: 30;
+        }
+
+        .nav-item {
+            color: var(--muted);
+            font-size: 11px;
+            text-align: center;
+            cursor: pointer;
+            flex: 1;
+            font-weight: 600;
+        }
+
+        .nav-item.active {
+            color: var(--accent);
+            font-weight: 800;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>🌺 ደረሰኝ ፈጣን እጣ</h1>
+        <div class="wallet-pill" onclick="switchTab('wallet', document.getElementById('nav-wallet'))">
+            <span>ዋሌት:</span>
+            <strong id="top-balance">1,000 ብር</strong>
+            <span class="wallet-add">+</span>
+        </div>
+    </div>
+
+    <!-- TAB 1: መጫወቻ (PLAY) -->
+    <div id="tab-play" class="tab-content active">
+        <!-- 4 የመደብ ምርጫዎች -->
+        <div class="room-tabs">
+            <div class="room-btn" onclick="selectRoom('10')" id="rbtn-10"><strong>10 ብር</strong><span>32 ቦታ</span></div>
+            <div class="room-btn" onclick="selectRoom('50')" id="rbtn-50"><strong>50 ብር</strong><span>24 ቦታ</span></div>
+            <div class="room-btn" onclick="selectRoom('100')" id="rbtn-100"><strong>100 ብር</strong><span>16 ቦታ</span>
+            </div>
+            <div class="room-btn active" onclick="selectRoom('300')" id="rbtn-300"><strong>300 ብር</strong><span>16
+                    ቦታ</span></div>
+        </div>
+
+        <div class="prize-banner">
+            <div class="banner-top">
+                <span id="room-title" style="font-size: 13px; font-weight: bold;">ዙር #42 • የ300 ብር መደብ</span>
+                <div class="timer-box" id="timer-display">⏱ 01:00</div>
+            </div>
+            <div class="prizes-grid">
+                <div class="prize-box"><span>🥇 1ኛ እጣ</span><strong id="p-first">3,000 ብር</strong></div>
+                <div class="prize-box"><span>🥈 2ኛ እጣ</span><strong id="p-second">600 ብር</strong></div>
+                <div class="prize-box"><span>🥉 3ኛ እጣ</span><strong id="p-third">300 ብር</strong></div>
+            </div>
+        </div>
+
+        <!-- አሸናፊ ሲወጣ የሚታይ -->
+        <div class="winner-alert" id="winner-banner"></div>
+
+        <div class="progress-label">
+            <span>የተያዙ ቁጥሮች (ሰዓቱ ሲያልቅ አውቶማቲክ ይሞላል)</span>
+            <span id="count-text">0 / 16</span>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="prog-bar"></div>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+            <input type="text" id="playerName" class="input-field" style="margin:0;"
+                placeholder="የእርስዎ መጫወቻ ስም (ምሳሌ: Selman)">
+        </div>
+
+        <div class="numbers-grid" id="grid"></div>
+
+        <button class="btn-main" id="buy-btn" onclick="buySelectedSlots()">ከዋሌት ከፍለው ቁጥር ይያዙ</button>
+    </div>
+
+    <!-- TAB 2: ዋሌት (DEPOSIT & WITHDRAW) -->
+    <div id="tab-wallet" class="tab-content">
+        <div class="info-card" style="text-align: center; background: linear-gradient(135deg, #1e293b, #0f172a);">
+            <span style="font-size: 12px; color: var(--muted);">ያለዎት ጠቅላላ ቀሪ ሂሳብ (Available Balance)</span>
+            <h2 id="wallet-big-balance" style="font-size: 28px; color: var(--gold); margin: 6px 0;">1,000 ብር</h2>
+        </div>
+
+        <!-- Deposit Form -->
+        <div class="info-card">
+            <h3 style="font-size: 14px; margin-bottom: 6px; color: var(--accent);">📥 ብር ወደ ዋሌት ማስገቢያ (Deposit)</h3>
+            <div
+                style="font-size: 12px; color: #cbd5e1; background: #0b1120; padding: 8px; border-radius: 8px; margin-bottom: 8px;">
+                🏦 <b>CBE:</b> 1000608678089 (Mekides Kifle)<br>
+                📱 <b>Telebirr:</b> 0942556419 (Feruza)
+            </div>
+            <input type="number" id="dep-amount" class="input-field" placeholder="የላኩት የብር መጠን (ምሳሌ: 1000)">
+            <input type="text" id="dep-ft" class="input-field" placeholder="የደረሰኝ ቁጥር (FT / Transaction ID)">
+            <button class="btn-main" onclick="handleDeposit()">✅ ብር ወደ ዋሌት አስገባ</button>
+        </div>
+
+        <!-- Withdraw Form -->
+        <div class="info-card">
+            <h3 style="font-size: 14px; margin-bottom: 6px; color: var(--gold);">📤 ብር ወጪ መጠየቂያ (Withdraw)</h3>
+            <input type="number" id="with-amount" class="input-field" placeholder="ወጪ የሚሆን የብር መጠን (ዝቅተኛ 50 ብር)">
+            <input type="text" id="with-account" class="input-field" placeholder="CBE ወይም Telebirr ቁጥር እና ስም">
+            <button class="btn-main" style="background: var(--gold); color: #000;" onclick="handleWithdraw()">💸 ወጪ አድርግ
+                (Withdraw)</button>
+        </div>
+
+        <!-- Transaction History -->
+        <div class="info-card">
+            <h3 style="font-size: 13px; margin-bottom: 8px;">📜 የሂሳብ እንቅስቃሴ (Transactions)</h3>
+            <div id="tx-list"></div>
+        </div>
+    </div>
+
+    <!-- TAB 3: ኮሚሽን (INVITE) -->
+    <div id="tab-invite" class="tab-content">
+        <div class="info-card">
+            <h3 style="margin-bottom: 6px;">👥 ጓደኛ ይጋብዙ (20 ብር ኮሚሽን)</h3>
+            <p style="font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 10px;">
+                በእርስዎ ሊንክ የሚገባ ሰው ዲፖዚት አድርጎ ሲጫወት ወዲያውኑ ወደ ዋሌትዎ የሚገባ ኮሚሽን ያገኛሉ!
+            </p>
+            <div class="input-field" id="ref-link" style="word-break: break-all;">
+                https://t.me/DeresegnBot?start=ref_1001</div>
+            <button class="btn-main"
+                onclick="navigator.clipboard.writeText(document.getElementById('ref-link').innerText); alert('ሊንኩ ኮፒ ተደርጓል!');">📋
+                ሊንኩን ኮፒ አድርግ</button>
+        </div>
+    </div>
+
+    <!-- TAB 4: አሸናፊዎች (WINNERS) -->
+    <div id="tab-winners" class="tab-content">
+        <h3 style="margin-bottom: 10px; font-size: 14px;">🏆 የየደቂቃው አሸናፊዎች ዝርዝር</h3>
+        <div id="winners-list"></div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <div class="nav-item active" id="nav-play" onclick="switchTab('play', this)">🎲 መጫወቻ</div>
+        <div class="nav-item" id="nav-wallet" onclick="switchTab('wallet', this)">💳 ዋሌት</div>
+        <div class="nav-item" id="nav-invite" onclick="switchTab('invite', this)">👥 ኮሚሽን</div>
+        <div class="nav-item" id="nav-winners" onclick="switchTab('winners', this)">🏆 አሸናፊዎች</div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        const userId = tg.initDataUnsafe?.user?.id || "1001";
+        document.getElementById('playerName').value = tg.initDataUnsafe?.user?.first_name || "Selman";
+
+        let currentRoomId = "300";
+        let selectedSlots = [];
+        let appState = null;
+
+        function selectRoom(roomId) {
+            currentRoomId = roomId;
+            selectedSlots = [];
+            document.querySelectorAll('.room-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`rbtn-${roomId}`).classList.add('active');
+            renderUI();
+        }
+
+        async function fetchState() {
+            try {
+                const res = await fetch(`/api/state?userId=${userId}`);
+                appState = await res.json();
+                renderUI();
+            } catch (e) { }
+        }
+
+        function renderUI() {
+            if (!appState) return;
+            const { user, rooms, winnersHistory } = appState;
+            const room = rooms[currentRoomId];
+
+            // Balance
+            document.getElementById('top-balance').innerText = `${user.balance.toLocaleString()} ብር`;
+            document.getElementById('wallet-big-balance').innerText = `${user.balance.toLocaleString()} ብር`;
+
+            // Room Header & Prizes
+            document.getElementById('room-title').innerText = `ዙር #${room.round} • ${room.title}`;
+            document.getElementById('p-first').innerText = `${room.prizes.first.toLocaleString()} ብር`;
+            document.getElementById('p-second').innerText = `${room.prizes.second.toLocaleString()} ብር`;
+            document.getElementById('p-third').innerText = `${room.prizes.third.toLocaleString()} ብር`;
+
+            // Countdown Timer
+            const timerEl = document.getElementById('timer-display');
+            const sec = room.timeLeft;
+            timerEl.innerText = room.status === 'drawing' ? '🎲 እጣ እየወጣ ነው!' : `⏱ 00:${sec < 10 ? '0' + sec : sec}`;
+            if (sec <= 10 || room.status === 'drawing') timerEl.classList.add('urgent');
+            else timerEl.classList.remove('urgent');
+
+            // Winner Banner
+            const winBanner = document.getElementById('winner-banner');
+            if (room.status === 'drawing' && room.lastWinner) {
+                winBanner.style.display = 'block';
+                winBanner.innerHTML = `🎉 ዙር #${room.lastWinner.round} አሸናፊዎች ወጥተዋል!<br>` +
+                    `🥇 1ኛ: #${room.lastWinner.firstNum} (${room.lastWinner.firstName}) | ` +
+                    `🥈 2ኛ: #${room.lastWinner.secondNum} (${room.lastWinner.secondName}) | ` +
+                    `🥉 3ኛ: #${room.lastWinner.thirdNum} (${room.lastWinner.thirdName})`;
+            } else {
+                winBanner.style.display = 'none';
+            }
+
+            // Progress
+            const takenCount = Object.keys(room.slots).length;
+            document.getElementById('count-text').innerText = `${takenCount} / ${room.totalSlots} ተሞልቷል`;
+            document.getElementById('prog-bar').style.width = `${(takenCount / room.totalSlots) * 100}%`;
+
+            // Slots Grid
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            for (let i = 1; i <= room.totalSlots; i++) {
+                const div = document.createElement('div');
+                const slotInfo = room.slots[i];
+                const isWinner = room.lastWinner && (i === room.lastWinner.firstNum || i === room.lastWinner.secondNum || i === room.lastWinner.thirdNum);
+
+                if (slotInfo) {
+                    selectedSlots = selectedSlots.filter(n => n !== i);
+                    div.className = `slot taken ${isWinner ? 'winner-glow' : ''}`;
+                    div.innerHTML = `<span class="num">${i}</span><span class="owner">${slotInfo.name} ✅</span>`;
+                } else {
+                    const isSel = selectedSlots.includes(i);
+                    div.className = `slot ${isSel ? 'selected' : ''}`;
+                    div.innerHTML = `<span class="num">${i}</span><span class="owner">${isSel ? 'ተመርጧል' : 'ክፍት'}</span>`;
+                    div.onclick = () => toggleSlot(i);
+                }
+                grid.appendChild(div);
+            }
+
+            // Buy Button
+            const buyBtn = document.getElementById('buy-btn');
+            if (selectedSlots.length === 0) {
+                buyBtn.innerText = `ለመጫወት ክፍት ቁጥር ይምረጡ (${room.stake} ብር)`;
+            } else {
+                const cost = selectedSlots.length * room.stake;
+                buyBtn.innerText = `ቁጥር #${selectedSlots.join(', #')} በ ${cost} ብር ከዋሌት ይቁረጡ`;
+            }
+
+            // Transactions
+            document.getElementById('tx-list').innerHTML = user.transactions.map(t => `
+      <div class="tx-item">
+        <span>${t.type}</span>
+        <strong style="color:${t.amount > 0 ? '#10b981' : '#f8fafc'}">${t.amount > 0 ? '+' + t.amount : t.amount} ብር</strong>
+      </div>
+    `).join('');
+
+            // Winners History
+            document.getElementById('winners-list').innerHTML = winnersHistory.map(w => `
+      <div class="info-card">
+        <strong style="color:var(--gold); font-size:13px;">🏅 ዙር #${w.round} (${w.room} መደብ)</strong>
+        <div style="font-size:12px; margin-top:5px; line-height:1.6;">
+          🥇 1ኛ: ${w.first}<br>🥈 2ኛ: ${w.second}<br>🥉 3ኛ: ${w.third}
+        </div>
+      </div>
+    `).join('');
+        }
+
+        function toggleSlot(num) {
+            selectedSlots = selectedSlots.includes(num)
+                ? selectedSlots.filter(n => n !== num)
+                : [...selectedSlots, num];
+            renderUI();
+        }
+
+        async function buySelectedSlots() {
+            if (selectedSlots.length === 0) return alert('እባክዎ መጀመሪያ ቁጥር ይምረጡ!');
+            const playerName = document.getElementById('playerName').value.trim() || 'ተጫዋች';
+            const res = await fetch('/api/buy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, roomId: currentRoomId, numbers: selectedSlots, playerName })
+            });
+            const data = await res.json();
+            if (data.error) return alert(data.error);
+            selectedSlots = [];
+            fetchState();
+        }
+
+        async function handleDeposit() {
+            const amount = document.getElementById('dep-amount').value;
+            const ftNumber = document.getElementById('dep-ft').value.trim();
+            const res = await fetch('/api/deposit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, amount, ftNumber })
+            });
+            const data = await res.json();
+            if (data.error) return alert(data.error);
+            document.getElementById('dep-amount').value = '';
+            document.getElementById('dep-ft').value = '';
+            alert('✅ ብሩ ወደ ዋሌትዎ ገብቷል!');
+            fetchState();
+        }
+
+        async function handleWithdraw() {
+            const amount = document.getElementById('with-amount').value;
+            const accountInfo = document.getElementById('with-account').value.trim();
+            const res = await fetch('/api/withdraw', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, amount, accountInfo })
+            });
+            const data = await res.json();
+            if (data.error) return alert(data.error);
+            document.getElementById('with-amount').value = '';
+            alert('✅ የወጪ ጥያቄዎ ተልኳል! በደቂቃዎች ውስጥ ወደ አካውንትዎ ይገባል።');
+            fetchState();
+        }
+
+        function switchTab(tab, el) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            el.classList.add('active');
+        }
+
+        // በየ1 ሰከንዱ ቆጣሪውን እና የተያዙ ቁጥሮችን ከሰርቨር ማዘመን
+        setInterval(fetchState, 1000);
+        fetchState();
+    </script>
+</body>
+
+</html>
