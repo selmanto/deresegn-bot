@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="am">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeresegnBot - Admin Panel</title>
+    <style>
+        body {
+            background: #0f172a;
+            color: #f8fafc;
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #10b981;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 10px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 700px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            font-size: 16px;
+            color: #f59e0b;
+            margin-bottom: 12px;
+        }
+
+        .item {
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #334155;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .btn-group {
+            margin-top: 8px;
+            display: flex;
+            gap: 8px;
+        }
+
+        button {
+            padding: 7px 14px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .btn-approve {
+            background: #10b981;
+            color: #fff;
+        }
+
+        .btn-reject {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .empty {
+            color: #94a3b8;
+            font-size: 13px;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+    <script>
+        // አድሚን ገጹ ሲከፈት የሚጠይቀው ሚስጥር ቁጥር (PIN)
+        const ADMIN_PIN = "2007"; // ይህንን ወደ ፈለግከው ቁጥር መቀየር ትችላለህ
+        const enteredPin = prompt("🔒 የአድሚን ሚስጥር ቁጥር (PIN) ያስገቡ:");
+        if (enteredPin !== ADMIN_PIN) {
+            document.body.innerHTML = "<h2 style='color:#ef4444; text-align:center; margin-top:50px;'>❌ የተሳሳተ ሚስጥር ቁጥር! መግባት አይቻልም።</h2>";
+            throw new Error("Unauthorized");
+        }
+    </script>
+    <h1>🛠️ ደረሰኝ ፈጣን እጣ — የአድሚን መቆጣጠሪያ (Admin Panel)</h1>
+
+    <div class="grid">
+        <!-- Pending Deposits -->
+        <div class="card">
+            <h2>📥 የገቡ የDeposit ጥያቄዎች (FT ማረጋገጫ)</h2>
+            <div id="deposits-list"></div>
+        </div>
+
+        <!-- Pending Withdrawals -->
+        <div class="card">
+            <h2>📤 የወጪ (Withdraw) ጥያቄዎች</h2>
+            <div id="withdrawals-list"></div>
+        </div>
+    </div>
+
+    <script>
+        async function loadAdminData() {
+            const res = await fetch('/api/admin/data');
+            const data = await res.json();
+
+            const depDiv = document.getElementById('deposits-list');
+            if (data.pendingDeposits.length === 0) {
+                depDiv.innerHTML = '<div class="empty">ምንም አዲስ የDeposit ጥያቄ የለም።</div>';
+            } else {
+                depDiv.innerHTML = data.pendingDeposits.map(d => `
+        <div class="item">
+          👤 <b>ተጫዋች ID:</b> ${d.userId}<br>
+          💵 <b>የብር መጠን:</b> <span style="color:#10b981; font-weight:bold;">${d.amount} ብር</span><br>
+          🧾 <b>FT ቁጥር:</b> <code style="color:#fde047;">${d.ftNumber}</code><br>
+          🕒 <b>ሰዓት:</b> ${d.time}
+          <div class="btn-group">
+            <button class="btn-approve" onclick="actionDeposit('${d.id}', 'approve')">✅ አጽድቅ (Approve)</button>
+            <button class="btn-reject" onclick="actionDeposit('${d.id}', 'reject')">❌ ውድቅ አድርግ</button>
+          </div>
+        </div>
+      `).join('');
+            }
+
+            const withDiv = document.getElementById('withdrawals-list');
+            if (data.pendingWithdrawals.length === 0) {
+                withDiv.innerHTML = '<div class="empty">ምንም አዲስ የWithdraw ጥያቄ የለም።</div>';
+            } else {
+                withDiv.innerHTML = data.pendingWithdrawals.map(w => `
+        <div class="item">
+          👤 <b>ተጫዋች ID:</b> ${w.userId}<br>
+          💸 <b>ወጪ የሚሆን ብር:</b> <span style="color:#f59e0b; font-weight:bold;">${w.amount} ብር</span><br>
+          🏦 <b>አካውንት:</b> <code style="color:#38bdf8;">${w.accountInfo}</code><br>
+          🕒 <b>ሰዓት:</b> ${w.time}
+          <div class="btn-group">
+            <button class="btn-approve" onclick="actionWithdraw('${w.id}', 'approve')">✅ ብሩን ልኬያለሁ (Paid)</button>
+            <button class="btn-reject" onclick="actionWithdraw('${w.id}', 'reject')">❌ መልስ (Refund)</button>
+          </div>
+        </div>
+      `).join('');
+            }
+        }
+
+        async function actionDeposit(id, action) {
+            await fetch('/api/admin/deposit-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, action })
+            });
+            loadAdminData();
+        }
+
+        async function actionWithdraw(id, action) {
+            await fetch('/api/admin/withdraw-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, action })
+            });
+            loadAdminData();
+        }
+
+        setInterval(loadAdminData, 2000);
+        loadAdminData();
+    </script>
+</body>
+
+</html>
