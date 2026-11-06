@@ -228,61 +228,51 @@ app.post('/api/admin/withdraw-action', (req, res) => {
     res.json({ success: true });
 });
 
-// Telegram Bot ማስነሻ (ያለ ምንም ላይብረሪ በቀጥታ በ Node v22 የሚሰራ)
-if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
-    let lastUpdateId = 0;
-    console.log('🤖 የቴሌግራም ቦቱ በቀጥታ ተገናኝቷል!');
+// Telegram Bot በ Webhook (በፍጹም የማይቋረጥ እና ከእንቅልፍ የሚቀሰቅስ)
+app.post('/bot-webhook', async (req, res) => {
+  try {
+    const msg = req.body.message;
+    if (msg && msg.text && msg.text.startsWith('/start')) {
+      const chatId = msg.chat.id;
+      const firstName = msg.from?.first_name || 'ተጫዋች';
 
-    setInterval(async () => {
-        try {
-            const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=${lastUpdateId + 1}&timeout=1`);
-            const data = await res.json();
-            if (data.ok && data.result.length > 0) {
-                for (const update of data.result) {
-                    lastUpdateId = update.update_id;
-                    const msg = update.message;
-                    if (msg && msg.text && msg.text.startsWith('/start')) {
-                        const chatId = msg.chat.id;
-                        const firstName = msg.from?.first_name || 'ተጫዋች';
-
-                        // ሪፈራል (Invite) ካለው መመዝገብ
-                        const parts = msg.text.split(' ');
-                        if (parts[1] && parts[1].startsWith('ref_')) {
-                            const inviterId = parts[1].replace('ref_', '');
-                            if (inviterId !== String(chatId) && db.users[inviterId]) {
-                                db.users[inviterId].referralsCount = (db.users[inviterId].referralsCount || 0) + 1;
-                                saveDB();
-                            }
-                        }
-
-                        // የእንኳን ደህና መጡ መልዕክት እና የMini App መክፈቻ ቁልፍ መላክ
-                        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                chat_id: chatId,
-                                text: `🌺 እንኳን ወደ *ደረሰኝ ፈጣን እጣ* በደህና መጡ ${firstName}!\n\n🎯 ከ10 ብር እስከ 300 ብር መደቦች በየደቂቃው ይወጣሉ!\n👇 ለመጫወት ከታች ያለውን ቁልፍ ይጫኑ፦`,
-                                parse_mode: 'Markdown',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [{ text: "🎲 እጣ ግባ / Play Now", web_app: { url: PUBLIC_URL } }]
-                                    ]
-                                }
-                            })
-                        });
-                    }
-                }
-            }
-        } catch (err) {
-            // የኢንተርኔት መቆራረጥ ካለ ሰርቨሩ እንዳይቆም ያደርጋል
+      // ሪፈራል መመዝገብ
+      const parts = msg.text.split(' ');
+      if (parts[1] && parts[1].startsWith('ref_')) {
+        const inviterId = parts[1].replace('ref_', '');
+        if (inviterId !== String(chatId) && db.users[inviterId]) {
+          db.users[inviterId].referralsCount = (db.users[inviterId].referralsCount || 0) + 1;
+          saveDB();
         }
-    }, 1500);
-}
+      }
 
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: `🌺 እንኳን ወደ *ደረሰኝ ፈጣን እጣ* በደህና መጡ ${firstName}!\n\n🎯 ከ10 ብር እስከ 300 ብር መደቦች በየደቂቃው ይወጣሉ!\n👇 ለመጫወት ከታች ያለውን ቁልፍ ይጫኑ፦`,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "🎲 እጣ ግባ / Play Now", web_app: { url: PUBLIC_URL } }]
+            ]
+          }
+        })
+      });
+    }
+  } catch (e) {}
+  res.sendStatus(200);
+});
 
 const PORT = process.env.PORT || 8080;
 const server = http.createServer(app);
 
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ DeresegnBot Server running on port ${PORT}`);
+server.listen(PORT, '0.0.0.0', async () => {
+  console.log(`✅ DeresegnBot Server running on port ${PORT}`);
+  if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
+    const webhookUrl = `${PUBLIC_URL}/bot-webhook`;
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${webhookUrl}`);
+    console.log(`🤖 Telegram Webhook ተገናኝቷል: ${webhookUrl}`);
+  }
 });
