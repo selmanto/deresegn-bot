@@ -92,15 +92,28 @@
 </head>
 
 <body>
-    <script>
-        // አድሚን ገጹ ሲከፈት የሚጠይቀው ሚስጥር ቁጥር (PIN)
-        const ADMIN_PIN = "2007"; // ይህንን ወደ ፈለግከው ቁጥር መቀየር ትችላለህ
-        const enteredPin = prompt("🔒 የአድሚን ሚስጥር ቁጥር (PIN) ያስገቡ:");
-        if (enteredPin !== ADMIN_PIN) {
-            document.body.innerHTML = "<h2 style='color:#ef4444; text-align:center; margin-top:50px;'>❌ የተሳሳተ ሚስጥር ቁጥር! መግባት አይቻልም።</h2>";
+    
+<script>
+    // የአድሚን ሚስጥር ቁጥር
+    const ADMIN_PIN = "2580";
+
+    // በዚህ Tab ቀድሞ ገብቶ እንደሆነ መፈተሽ
+    if (sessionStorage.getItem("admin_auth") !== "true") {
+
+        const entered = prompt("🔒 የአድሚን ሚስጥር ቁጥር (PIN) ያስገቡ:");
+
+        if (entered !== ADMIN_PIN) {
+            document.body.innerHTML =
+                "<h2 style='color:#ef4444;text-align:center;margin-top:60px;'>❌ የተሳሳተ ሚስጥር ቁጥር! መግባት አይቻልም።</h2>";
+
             throw new Error("Unauthorized");
         }
-    </script>
+
+        // በዚህ Tab ውስጥ የአድሚን መግቢያን ማስታወስ
+        sessionStorage.setItem("admin_auth", "true");
+    }
+</script>
+
     <h1>🛠️ ደረሰኝ ፈጣን እጣ — የአድሚን መቆጣጠሪያ (Admin Panel)</h1>
 
     <div class="grid">
