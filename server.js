@@ -12,7 +12,7 @@ const PUBLIC_URL = 'https://deresegn-bot.onrender.com';
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const DB_FILE = path.join(__dirname, 'database.json');
@@ -161,123 +161,231 @@ app.post('/api/buy', (req, res) => {
     res.json({ success: true, balance: user.balance });
 });
 
+// ለአድሚኑ በቴሌግራም መልዕክት እና ስክሪንሾት መላኪያ ተግባር
+async function notifyAdmin(text, screenshot = null, buttons = null) {
+  const adminId = db.adminChatId;
+  if (!BOT_TOKEN || !adminId) return;
+
+  const replyMarkup = buttons ? { inline_keyboard: buttons } : {
+    inline_keyboard: [[{ text: "🛠️ Admin Panel ክፈት", url: `${PUBLIC_URL}/admin.html` }]]
+  };
+
+  try {
+    if (screenshot && screenshot.startsWith('data:image')) {
+      const base64Data = screenshot.split(',')[1];
+      const buffer = Buffer.from(base64Data, 'base64');
+      const form = new FormData();
+      form.append('chat_id', adminId);
+      form.append('caption', text.slice(0, 1000));
+      form.append('photo', new Blob([buffer], { type: 'image/jpeg' }), 'receipt.jpg');
+      form.append('reply_markup', JSON.stringify(replyMarkup));
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method: 'POST', body: form });
+      return;
+    }
+  } catch (e) {}
+
+  try {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: adminId, text: text, reply_markup: replyMarkup })
+    });
+  } catch (e) {}
+}
+
 // Deposit ወደ Admin ማረጋገጫ ይሄዳል
 app.post('/api/deposit', (req, res) => {
-    const { userId = "1001", amount, ftNumber } = req.body;
-    const numAmount = Number(amount);
-    if (!numAmount || numAmount < 10 || !ftNumber) return res.status(400).json({ error: "ትክክለኛ መጠን እና FT ያስገቡ!" });
+  const { userId = "1001", amount, ftNumber, screenshot } = req.body;
+  const numAmount = Number(amount);
+  if (!numAmount || numAmount < 10 || (!ftNumber && !screenshot)) {
+    return res.status(400).json({ error: "ትክክለኛ መጠን እና ደረሰኝ ያስገቡ!" });
+  }
 
-    const depId = 'dep_' + Date.now();
-    db.pendingDeposits.unshift({ id: depId, userId, amount: numAmount, ftNumber, time: new Date().toLocaleTimeString() });
-    db.users[userId].transactions.unshift({ id: depId, type: `⏳ Deposit በመጠባበቅ ላይ (FT: ${ftNumber})`, amount: numAmount, time: "አሁን" });
-    saveDB();
-    res.json({ success: true });
+  const depId = 'dep_' + Date.now();
+  db.pendingDeposits.unshift({
+    id: depId, userId, amount: numAmount, ftNumber: ftNumber || 'ፎቶ ብቻ', screenshot: screenshot || null, time: new Date().toLocaleTimeString()
+  });
+  db.users[userId].transactions.unshift({
+    id: depId, type: `⏳ Deposit በመጠባበቅ ላይ`, amount: numAmount, time: "አሁን"
+  });
+  saveDB();
+
+  // ወዲያውኑ ለአድሚኑ በቴሌግራም ማሳወቅ
+  notifyAdmin(
+    `🔔 አዲስ የ ${numAmount} ብር Deposit ጥያቄ ገብቷል!\n\n👤 ተጫዋች ID: ${userId}\n💵 መጠን: ${numAmount} ብር\n📩 ደረሰኝ/ሜሴጅ:\n${ftNumber}`,
+    screenshot,
+    [
+      [
+        { text: "✅ አጽድቅ (Approve)", callback_data: `appdep_${depId}` },
+        { text: "❌ ውድቅ አድርግ (Reject)", callback_data: `rejdep_${depId}` }
+      ],
+      [{ text: "🛠️ Admin Panel ክፈት", url: `${PUBLIC_URL}/admin.html` }]
+    ]
+  );
+
+  res.json({ success: true });
 });
 
 // Withdraw ወደ Admin ይሄዳል
 app.post('/api/withdraw', (req, res) => {
-    const { userId = "1001", amount, accountInfo } = req.body;
-    const numAmount = Number(amount);
-    const user = db.users[userId];
-    if (!numAmount || numAmount < 50 || !accountInfo) return res.status(400).json({ error: "ዝቅተኛው ወጪ 50 ብር ነው!" });
-    if (user.balance < numAmount) return res.status(400).json({ error: "በቂ ቀሪ ሂሳብ የለም!" });
+  const { userId = "1001", amount, accountInfo } = req.body;
+  const numAmount = Number(amount);
+  const user = db.users[userId];
+  if (!numAmount || numAmount < 50 || !accountInfo) return res.status(400).json({ error: "ዝቅተኛው ወጪ 50 ብር ነው!" });
+  if (user.balance < numAmount) return res.status(400).json({ error: "በቂ ቀሪ ሂሳብ የለም!" });
 
-    user.balance -= numAmount;
-    const withId = 'with_' + Date.now();
-    db.pendingWithdrawals.unshift({ id: withId, userId, amount: numAmount, accountInfo, time: new Date().toLocaleTimeString() });
-    user.transactions.unshift({ id: withId, type: `⏳ Withdraw በመጠባበቅ ላይ (${accountInfo})`, amount: -numAmount, time: "አሁን" });
-    saveDB();
-    res.json({ success: true });
+  user.balance -= numAmount;
+  const withId = 'with_' + Date.now();
+  db.pendingWithdrawals.unshift({ id: withId, userId, amount: numAmount, accountInfo, time: new Date().toLocaleTimeString() });
+  user.transactions.unshift({ id: withId, type: `⏳ Withdraw በመጠባበቅ ላይ (${accountInfo})`, amount: -numAmount, time: "አሁን" });
+  saveDB();
+
+  // ወዲያውኑ ለአድሚኑ በቴሌግራም ማሳወቅ
+  notifyAdmin(
+    `💸 አዲስ የ ${numAmount} ብር Withdraw (ወጪ) ጥያቄ!\n\n👤 ተጫዋች ID: ${userId}\n💰 መጠን: ${numAmount} ብር\n🏦 አካውንት: ${accountInfo}`,
+    null,
+    [
+      [
+        { text: "✅ ብሩን ልኬያለሁ (Paid)", callback_data: `appwith_${withId}` },
+        { text: "❌ መልስ (Refund)", callback_data: `rejwith_${withId}` }
+      ]
+    ]
+  );
+
+  res.json({ success: true });
 });
 
 // ADMIN APIs
 app.get('/api/admin/data', (req, res) => {
-    res.json({ pendingDeposits: db.pendingDeposits, pendingWithdrawals: db.pendingWithdrawals });
+  res.json({ pendingDeposits: db.pendingDeposits, pendingWithdrawals: db.pendingWithdrawals });
 });
 
-app.post('/api/admin/deposit-action', (req, res) => {
-    const { id, action } = req.body;
-    const idx = db.pendingDeposits.findIndex(d => d.id === id);
-    if (idx === -1) return res.json({ error: "አልተገኘም" });
-
-    const dep = db.pendingDeposits.splice(idx, 1)[0];
-    const user = db.users[dep.userId];
-    if (user) {
-        if (action === 'approve') {
-            user.balance += dep.amount;
-            user.transactions.unshift({ type: `✅ Deposit ጸድቋል (FT: ${dep.ftNumber})`, amount: dep.amount, time: "አሁን" });
-        } else {
-            user.transactions.unshift({ type: `❌ Deposit ውድቅ ተደርጓል (FT: ${dep.ftNumber})`, amount: 0, time: "አሁን" });
-        }
+function processDepositAction(id, action) {
+  const idx = db.pendingDeposits.findIndex(d => d.id === id);
+  if (idx === -1) return null;
+  const dep = db.pendingDeposits.splice(idx, 1)[0];
+  const user = db.users[dep.userId];
+  if (user) {
+    if (action === 'approve') {
+      user.balance += dep.amount;
+      user.transactions.unshift({ type: `✅ Deposit ጸድቋል`, amount: dep.amount, time: "አሁን" });
+    } else {
+      user.transactions.unshift({ type: `❌ Deposit ውድቅ ተደርጓል`, amount: 0, time: "አሁን" });
     }
-    saveDB();
-    res.json({ success: true });
+  }
+  saveDB();
+  return dep;
+}
+
+function processWithdrawAction(id, action) {
+  const idx = db.pendingWithdrawals.findIndex(w => w.id === id);
+  if (idx === -1) return null;
+  const w = db.pendingWithdrawals.splice(idx, 1)[0];
+  const user = db.users[w.userId];
+  if (user) {
+    if (action === 'approve') {
+      user.transactions.unshift({ type: `✅ Withdraw ተከፍሏል (${w.accountInfo})`, amount: -w.amount, time: "አሁን" });
+    } else {
+      user.balance += w.amount;
+      user.transactions.unshift({ type: `↩️ Withdraw ተመልሷል`, amount: w.amount, time: "አሁን" });
+    }
+  }
+  saveDB();
+  return w;
+}
+
+app.post('/api/admin/deposit-action', (req, res) => {
+  processDepositAction(req.body.id, req.body.action);
+  res.json({ success: true });
 });
 
 app.post('/api/admin/withdraw-action', (req, res) => {
-    const { id, action } = req.body;
-    const idx = db.pendingWithdrawals.findIndex(w => w.id === id);
-    if (idx === -1) return res.json({ error: "አልተገኘም" });
-
-    const w = db.pendingWithdrawals.splice(idx, 1)[0];
-    const user = db.users[w.userId];
-    if (user) {
-        if (action === 'approve') {
-            user.transactions.unshift({ type: `✅ Withdraw ተከፍሏል (${w.accountInfo})`, amount: -w.amount, time: "አሁን" });
-        } else {
-            user.balance += w.amount; // ብሩን መመለስ
-            user.transactions.unshift({ type: `↩️ Withdraw ተመልሷል`, amount: w.amount, time: "አሁን" });
-        }
-    }
-    saveDB();
-    res.json({ success: true });
+  processWithdrawAction(req.body.id, req.body.action);
+  res.json({ success: true });
 });
 
-// Telegram Bot በ Webhook (በፍጹም የማይቋረጥ እና ከእንቅልፍ የሚቀሰቅስ)
-app.post('/bot-webhook', async (req, res) => {
-  try {
-    const msg = req.body.message;
-    if (msg && msg.text && msg.text.startsWith('/start')) {
-      const chatId = msg.chat.id;
-      const firstName = msg.from?.first_name || 'ተጫዋች';
+// Telegram Bot ማስነሻ
+if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
+  let lastUpdateId = 0;
+  console.log('🤖 የቴሌግራም ቦቱ በቀጥታ ተገናኝቷል!');
 
-      // ሪፈራል መመዝገብ
-      const parts = msg.text.split(' ');
-      if (parts[1] && parts[1].startsWith('ref_')) {
-        const inviterId = parts[1].replace('ref_', '');
-        if (inviterId !== String(chatId) && db.users[inviterId]) {
-          db.users[inviterId].referralsCount = (db.users[inviterId].referralsCount || 0) + 1;
-          saveDB();
+  setInterval(async () => {
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=${lastUpdateId + 1}&timeout=1`);
+      const data = await res.json();
+      if (data.ok && data.result.length > 0) {
+        for (const update of data.result) {
+          lastUpdateId = update.update_id;
+
+          // አድሚኑ ከቴሌግራም ላይ በቀጥታ Approve/Reject ሲነካ
+          if (update.callback_query) {
+            const cb = update.callback_query;
+            const cbData = cb.data || '';
+            let replyText = '';
+
+            if (cbData.startsWith('appdep_')) {
+              const d = processDepositAction(cbData.replace('appdep_', ''), 'approve');
+              replyText = d ? `✅ የ ${d.amount} ብር Deposit ጸድቋል!` : '⚠️ ይህ ጥያቄ ቀድሞ ተስተናግዷል።';
+            } else if (cbData.startsWith('rejdep_')) {
+              const d = processDepositAction(cbData.replace('rejdep_', ''), 'reject');
+              replyText = d ? `❌ የ ${d.amount} ብር Deposit ውድቅ ተደርጓል!` : '⚠️ ይህ ጥያቄ ቀድሞ ተስተናግዷል።';
+            } else if (cbData.startsWith('appwith_')) {
+              const w = processWithdrawAction(cbData.replace('appwith_', ''), 'approve');
+              replyText = w ? `✅ የ ${w.amount} ብር ወጪ ተከፍሏል ተብሎ ተመዝግቧል!` : '⚠️ ቀድሞ ተስተናግዷል።';
+            } else if (cbData.startsWith('rejwith_')) {
+              const w = processWithdrawAction(cbData.replace('rejwith_', ''), 'reject');
+              replyText = w ? `↩️ የ ${w.amount} ብር ወጪ ተመላሽ ተደርጓል!` : '⚠️ ቀድሞ ተስተናግዷል።';
+            }
+
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ callback_query_id: cb.id, text: replyText, show_alert: true })
+            });
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: cb.message.chat.id, text: replyText })
+            });
+          }
+
+          const msg = update.message;
+          if (!msg || !msg.text) continue;
+          const chatId = msg.chat.id;
+
+          // አድሚኑ ራሱን ለመመዝገብ /setadmin ብሎ ሲልክ
+          if (msg.text.startsWith('/setadmin')) {
+            db.adminChatId = chatId;
+            saveDB();
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: chatId,
+                text: `✅ እንኳን ደስ አለዎት! የእርስዎ ቴሌግራም (ID: ${chatId}) እንደ ዋና አድሚን ተመዝግቧል!\nከአሁን ጀምሮ ማንኛውም Deposit ስክሪንሾት እና የሜሴጅ ማረጋገጫ እዚህ ይደርስዎታል።`
+              })
+            });
+          }
+
+          if (msg.text.startsWith('/start')) {
+            const firstName = msg.from?.first_name || 'ተጫዋች';
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: chatId,
+                text: `🌺 እንኳን ወደ *ደረሰኝ ፈጣን እጣ* በደህና መጡ ${firstName}!\n\n🎯 ከ10 ብር እስከ 300 ብር መደቦች በየደቂቃው ይወጣሉ!\n👇 ለመጫወት ከታች ያለውን ቁልፍ ይጫኑ፦`,
+                parse_mode: 'Markdown',
+                reply_markup: {
+                  inline_keyboard: [[{ text: "🎲 እጣ ግባ / Play Now", web_app: { url: PUBLIC_URL } }]]
+                }
+              })
+            });
+          }
         }
       }
-
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: `🌺 እንኳን ወደ *ደረሰኝ ፈጣን እጣ* በደህና መጡ ${firstName}!\n\n🎯 ከ10 ብር እስከ 300 ብር መደቦች በየደቂቃው ይወጣሉ!\n👇 ለመጫወት ከታች ያለውን ቁልፍ ይጫኑ፦`,
-          parse_mode: 'Markdown',
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: "🎲 እጣ ግባ / Play Now", web_app: { url: PUBLIC_URL } }]
-            ]
-          }
-        })
-      });
-    }
-  } catch (e) {}
-  res.sendStatus(200);
-});
+    } catch (err) {}
+  }, 1500);
+}
 
 const PORT = process.env.PORT || 8080;
 const server = http.createServer(app);
-
-server.listen(PORT, '0.0.0.0', async () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ DeresegnBot Server running on port ${PORT}`);
-  if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
-    const webhookUrl = `${PUBLIC_URL}/bot-webhook`;
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${webhookUrl}`);
-    console.log(`🤖 Telegram Webhook ተገናኝቷል: ${webhookUrl}`);
-  }
 });
