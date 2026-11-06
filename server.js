@@ -23,11 +23,10 @@ const BOT_NAMES = [
     "Robel", "Elias", "TG", "Fira", "Alex", "Chala", "Beka", "Lidiya"
 ];
 
-// ቋሚ ዳታቤዝ መጫኛ
 let db = {
-    users: {
-        "1001": { balance: 1000, referralsCount: 2, referralEarned: 40, transactions: [] }
-    },
+  users: {
+    "1001": { balance: 10, referralsCount: 0, referralEarned: 0, transactions: [] }
+  },
     pendingDeposits: [],
     pendingWithdrawals: [],
     winnersHistory: [
@@ -125,14 +124,20 @@ function drawRoomWinner(room) {
     }, 6000);
 }
 
-// ተጫዋች APIs
 app.get('/api/state', (req, res) => {
-    const userId = req.query.userId || "1001";
-    if (!db.users[userId]) {
-        db.users[userId] = { balance: 0, referralsCount: 0, referralEarned: 0, transactions: [] };
-        saveDB();
-    }
-    res.json({ user: db.users[userId], rooms, winnersHistory: db.winnersHistory });
+  const userId = req.query.userId || "1001";
+  if (!db.users[userId]) {
+    db.users[userId] = { 
+      balance: 10, 
+      referralsCount: 0, 
+      referralEarned: 0, 
+      transactions: [
+        { type: "🎁 የእንኳን ደህና መጡ ነጻ ቦነስ", amount: 10, status: "Credited", time: "አሁን" }
+      ] 
+    };
+    saveDB();
+  }
+  res.json({ user: db.users[userId], rooms, winnersHistory: db.winnersHistory });
 });
 
 app.post('/api/buy', (req, res) => {
