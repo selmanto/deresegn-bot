@@ -8,7 +8,7 @@ const { exec } = require('child_process');
 
 // ቴሌግራም ቦት ስታገናኝ እነዚህን ሁለቱን ብቻ ትቀይራለህ
 const BOT_TOKEN = '9287818773:AAFMcBPcMlqRMjDx4YOv6OtabZBFi8TDTIs';
-const PUBLIC_URL = 'https://total-give-paint-lodging.trycloudflare.com';
+const PUBLIC_URL = 'https://deresegn-bot.onrender.com';
 
 const app = express();
 app.use(cors());
