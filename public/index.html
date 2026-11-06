@@ -445,11 +445,15 @@
         <!-- Deposit Form -->
         <div class="info-card">
             <h3 style="font-size: 14px; margin-bottom: 6px; color: var(--accent);">📥 ብር ወደ ዋሌት ማስገቢያ (Deposit)</h3>
-            <div
-                style="font-size: 12px; color: #cbd5e1; background: #0b1120; padding: 8px; border-radius: 8px; margin-bottom: 8px;">
-                🏦 <b>CBE:</b> 1000608678089 (Mekides Kifle)<br>
-                📱 <b>Telebirr:</b> 0942556419 (Feruza)
-            </div>
+            <div style="font-size: 12px; color: #cbd5e1; background: #0b1120; padding: 10px; border-radius: 8px; margin-bottom: 8px; line-height: 1.9;">
+  📱 <b>Telebirr:</b>
+  <code style="color:#fde047;">0927494997</code> (ali)
+
+  <button onclick="navigator.clipboard.writeText('09XXXXXXXX'); alert('የቴሌብር ቁጥር ኮፒ ተደርጓል!');"
+    style="background:#334155; color:#fff; border:none; padding:2px 6px; border-radius:4px; font-size:10px; cursor:pointer;">
+    Copy
+  </button>
+</div>
             <input type="number" id="dep-amount" class="input-field" placeholder="የላኩት የብር መጠን (ምሳሌ: 1000)">
             <input type="text" id="dep-ft" class="input-field" placeholder="የደረሰኝ ቁጥር (FT / Transaction ID)">
             <button class="btn-main" onclick="handleDeposit()">✅ ብር ወደ ዋሌት አስገባ</button>
