@@ -4,7 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
-const MONGO_URI = 'mongodb+srv://selmantoon_db_user:<db_password>@cluster0.jdz7hsp.mongodb.net/';
+const MONGO_URI = 'mongodb+srv://selmantoon_db_user:nb7Kam5fxPcwWWS8@cluster0.jdz7hsp.mongodb.net/deresegnbot?retryWrites=true&w=majority';
 const { exec } = require('child_process');
 
 
