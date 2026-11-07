@@ -178,7 +178,7 @@ app.get('/api/state', (req, res) => {
     };
     saveDB();
   }
-  res.json({ user: db.users[userId], rooms, winnersHistory: db.winnersHistory });
+  res.json({ user: db.users[userId], rooms, winnersHistory: db.winnersHistory, botUsername });
 });
 
 app.post('/api/buy', (req, res) => {
