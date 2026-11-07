@@ -3,6 +3,8 @@ const http = require('http');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const mongoose = require('mongoose');
+const MONGO_URI = 'mongodb+srv://selmantoon_db_user:<db_password>@cluster0.jdz7hsp.mongodb.net/';
 const { exec } = require('child_process');
 
 
@@ -34,11 +36,43 @@ let db = {
     ]
 };
 
+const AppDataSchema = new mongoose.Schema({
+  key: { type: String, default: 'main_db', unique: true },
+  data: { type: Object }
+});
+const AppData = mongoose.model('AppData', AppDataSchema);
+
+// 1. መጀመሪያ ከፋይል ላይ ማንበብ (ካለ)
 if (fs.existsSync(DB_FILE)) {
-    try { db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch (e) { }
+  try { db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch (e) {}
 }
+
+// 2. ሰርቨሩ ሲነሳ ቋሚውን ዳታ ከ MongoDB Atlas ማምጣት
+if (MONGO_URI && MONGO_URI.startsWith('mongodb')) {
+  mongoose.connect(MONGO_URI)
+    .then(async () => {
+      console.log('✅ ከ MongoDB Atlas ቋሚ ዳታቤዝ ጋር ተገናኝቷል!');
+      const saved = await AppData.findOne({ key: 'main_db' });
+      if (saved && saved.data) {
+        db = { ...db, ...saved.data };
+        console.log('📦 የተጫዋቾች ሂሳብ እና ዳታ ከ MongoDB ተጭኗል!');
+      } else {
+        await AppData.create({ key: 'main_db', data: db });
+      }
+    })
+    .catch(err => console.error('❌ MongoDB Error:', err.message));
+}
+
+// 3. ማንኛውም ለውጥ ሲኖር ወዲያውኑ ወደ MongoDB ማስቀመጥ
 function saveDB() {
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+  try { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); } catch (e) {}
+  if (mongoose.connection.readyState === 1) {
+    AppData.findOneAndUpdate(
+      { key: 'main_db' },
+      { $set: { data: db } },
+      { upsert: true }
+    ).catch(() => {});
+  }
 }
 
 let rooms = {
