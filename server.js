@@ -338,10 +338,59 @@ app.post('/api/admin/withdraw-action', (req, res) => {
   res.json({ success: true });
 });
 
+// በየ1 ሰዓቱ ወደ ቴሌግራም ቻናል/ግሩፕ አሸናፊዎችን መለጠፊያ ተግባር
+let botUsername = '';
+
+async function postWinnersToChannel() {
+  if (!BOT_TOKEN || !db.channelId || db.winnersHistory.length === 0) return;
+
+  // የቅርብ ጊዜዎቹን 4 አሸናፊዎች ማውጣት
+  const recentWinners = db.winnersHistory.slice(0, 4).map(w =>
+    `🏅 *ዙር #${w.round} (${w.room} መደብ)*\n   🥇 1ኛ: ${w.first}\n   🥈 2ኛ: ${w.second}\n   🥉 3ኛ: ${w.third}`
+  ).join('\n\n');
+
+  const postText = 
+    `🎉 *የደረሰኝ ፈጣን እጣ — የሰዓቱ አሸናፊዎች!* 🎉\n\n` +
+    `በየደቂቃው በሚወጣው እጣችን አሸናፊ የሆኑ እድለኞች ሽልማታቸው ወዲያውኑ ወደ ዋሌታቸው ገብቷል! 💸\n\n` +
+    `${recentWinners}\n\n` +
+    `🔥 *ቀጣዩ ዙር አሁን ተጀምሯል!*\n` +
+    `ከ 10 ብር እስከ 300 ብር መደቦች ገብተው እድልዎን ይሞክሩ!\n` +
+    `👇 *ለመጫወት ከታች ያለውን ቁልፍ ይጫኑ፦*`;
+
+  // በቻናል ላይ የሚሰራ ቀጥታ ወደ ቦቱ መግቢያ ሊንክ
+  const playUrl = botUsername ? `https://t.me/${botUsername}?start=channel` : PUBLIC_URL;
+
+  try {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: db.channelId,
+        text: postText,
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "🎲 እጣ ግባ / Play Now", url: playUrl }]
+          ]
+        }
+      })
+    });
+  } catch (e) {}
+}
+
+// በየ 1 ሰዓቱ (3,600,000 ሚሊሰከንድ) በራሱ ወደ ቻናሉ እንዲለጥፍ ማድረግ
+setInterval(postWinnersToChannel, 60 * 60 * 1000);
+
 // Telegram Bot ማስነሻ
 if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
   let lastUpdateId = 0;
   console.log('🤖 የቴሌግራም ቦቱ በቀጥታ ተገናኝቷል!');
+
+  // የቦቱን Username በራሱ እንዲያውቀው ማድረግ
+  fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMe`)
+    .then(r => r.json())
+    .then(d => { if (d.ok) botUsername = d.result.username; })
+    .catch(() => {});
 
   setInterval(async () => {
     try {
@@ -381,11 +430,12 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             });
           }
 
-          const msg = update.message;
+          // ከቻት ወይም ከቻናል የሚመጣ መልዕክት መቀበል
+          const msg = update.message || update.channel_post;
           if (!msg || !msg.text) continue;
           const chatId = msg.chat.id;
 
-          // አድሚኑ ራሱን ለመመዝገብ /setadmin ብሎ ሲልክ
+          // 1. አድሚን መመዝገቢያ (/setadmin)
           if (msg.text.startsWith('/setadmin')) {
             db.adminChatId = chatId;
             saveDB();
@@ -393,11 +443,37 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 chat_id: chatId,
-                text: `✅ እንኳን ደስ አለዎት! የእርስዎ ቴሌግራም (ID: ${chatId}) እንደ ዋና አድሚን ተመዝግቧል!\nከአሁን ጀምሮ ማንኛውም Deposit ስክሪንሾት እና የሜሴጅ ማረጋገጫ እዚህ ይደርስዎታል።`
+                text: `✅ እንኳን ደስ አለዎት! የእርስዎ ቴሌግራም (ID: ${chatId}) እንደ ዋና አድሚን ተመዝግቧል!`
               })
             });
           }
 
+          // 2. ቻናል ወይም ግሩፕ ማገናኛ (/setchannel)
+          if (msg.text.startsWith('/setchannel')) {
+            const parts = msg.text.split(' ');
+            // በግል ቻት '/setchannel @ChannelName' ካለ ወይም ቀጥታ ቻናሉ ውስጥ '/setchannel' ብሎ ከጻፈ
+            const targetChannel = parts[1] ? parts[1].trim() : chatId;
+            db.channelId = targetChannel;
+            saveDB();
+
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: chatId,
+                text: `✅ ቻናሉ (${targetChannel}) በትክክል ተገናኝቷል! ከአሁን ጀምሮ በየ 1 ሰዓቱ አሸናፊዎችን በራሱ ይለጥፋል።\nየመጀመሪያው የሙከራ ፖስት አሁን ተልኳል!`
+              })
+            });
+
+            // ወዲያውኑ ለሙከራ አንድ ፖስት ወደ ቻናሉ መላክ
+            await postWinnersToChannel();
+          }
+
+          // 3. በማንኛውም ሰዓት ወዲያውኑ ወደ ቻናሉ እንዲለጥፍ ለማዘዝ (/postnow)
+          if (msg.text.startsWith('/postnow')) {
+            await postWinnersToChannel();
+          }
+
+          // 4. ተጫዋቾች /start ሲሉ
           if (msg.text.startsWith('/start')) {
             const firstName = msg.from?.first_name || 'ተጫዋች';
             await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
