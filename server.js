@@ -4,13 +4,10 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
-const MONGO_URI = 'mongodb+srv://selmantoon_db_user:nb7Kam5fxPcwWWS8@cluster0.jdz7hsp.mongodb.net/deresegnbot?retryWrites=true&w=majority';
-const { exec } = require('child_process');
 
-
-// ቴሌግራም ቦት ስታገናኝ እነዚህን ሁለቱን ብቻ ትቀይራለህ
 const BOT_TOKEN = '9287818773:AAFMcBPcMlqRMjDx4YOv6OtabZBFi8TDTIs';
 const PUBLIC_URL = 'https://deresegn-bot.onrender.com';
+const MONGO_URI = 'mongodb+srv://selmantoon_db_user:nb7Kam5fxPcwWWS8@cluster0.jdz7hsp.mongodb.net/deresegnbot?retryWrites=true&w=majority';
 
 const app = express();
 app.use(cors());
@@ -20,20 +17,22 @@ app.use(express.static(path.join(__dirname, 'public')));
 const DB_FILE = path.join(__dirname, 'database.json');
 
 const BOT_NAMES = [
-    "kedir", "Dawd", "Mekdi", "Birhane", "ozil", "Yonas", "Abebe", "Sara",
-    "Nati", "Bini", "Hana", "Kal", "Dani", "Sami", "Tedi", "Marta",
-    "Robel", "Elias", "TG", "Fira", "Alex", "Chala", "Beka", "Lidiya"
+  "kedir", "Dawd", "Mekdi", "Birhane", "ozil", "Yonas", "Abebe", "Sara",
+  "Nati", "Bini", "Hana", "Kal", "Dani", "Sami", "Tedi", "Marta",
+  "Robel", "Elias", "TG", "Fira", "Alex", "Chala", "Beka", "Lidiya"
 ];
 
 let db = {
   users: {
-    "1001": { balance: 10, referralsCount: 0, referralEarned: 0, transactions: [] }
+    "1001": { balance: 10, referralsCount: 0, referralEarned: 0, referredBy: null, hasDeposited: false, transactions: [] }
   },
-    pendingDeposits: [],
-    pendingWithdrawals: [],
-    winnersHistory: [
-        { round: 41, room: "300 ብር", first: "Dawd (#4) - 3,000 ብር", second: "Mekdi (#11) - 600 ብር", third: "Kedir (#2) - 300 ብር" }
-    ]
+  pendingDeposits: [],
+  pendingWithdrawals: [],
+  winnersHistory: [
+    { round: 41, room: "300 ብር", first: "Dawd (#4) - 3,000 ብር", second: "Mekdi (#11) - 600 ብር", third: "Kedir (#2) - 300 ብር" }
+  ],
+  adminChatId: null,
+  channelId: null
 };
 
 const AppDataSchema = new mongoose.Schema({
@@ -42,12 +41,10 @@ const AppDataSchema = new mongoose.Schema({
 });
 const AppData = mongoose.model('AppData', AppDataSchema);
 
-// 1. መጀመሪያ ከፋይል ላይ ማንበብ (ካለ)
 if (fs.existsSync(DB_FILE)) {
-  try { db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch (e) {}
+  try { db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch (e) { }
 }
 
-// 2. ሰርቨሩ ሲነሳ ቋሚውን ዳታ ከ MongoDB Atlas ማምጣት
 if (MONGO_URI && MONGO_URI.startsWith('mongodb')) {
   mongoose.connect(MONGO_URI)
     .then(async () => {
@@ -63,9 +60,8 @@ if (MONGO_URI && MONGO_URI.startsWith('mongodb')) {
     .catch(err => console.error('❌ MongoDB Error:', err.message));
 }
 
-// 3. ማንኛውም ለውጥ ሲኖር ወዲያውኑ ወደ MongoDB ማስቀመጥ
 function saveDB() {
-  try { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); } catch (e) {}
+  try { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); } catch (e) { }
   if (mongoose.connection.readyState === 1) {
     AppData.findOneAndUpdate(
       { key: 'main_db' },
@@ -76,86 +72,97 @@ function saveDB() {
 }
 
 let rooms = {
-    "10": { id: "10", title: "የ10 ብር ፈጣን እጣ", stake: 10, totalSlots: 32, prizes: { first: 200, second: 50, third: 20 }, round: 101, timeLeft: 60, status: "betting", slots: {}, lastWinner: null },
-    "50": { id: "50", title: "የ50 ብር መደብ", stake: 50, totalSlots: 24, prizes: { first: 800, second: 150, third: 50 }, round: 85, timeLeft: 60, status: "betting", slots: {}, lastWinner: null },
-    "100": { id: "100", title: "የ100 ብር መደብ", stake: 100, totalSlots: 16, prizes: { first: 1000, second: 200, third: 100 }, round: 64, timeLeft: 60, status: "betting", slots: {}, lastWinner: null },
-    "300": { id: "300", title: "የ300 ብር VIP መደብ", stake: 300, totalSlots: 16, prizes: { first: 3000, second: 600, third: 300 }, round: 42, timeLeft: 60, status: "betting", slots: {}, lastWinner: null }
+  "10": { id: "10", title: "የ10 ብር ፈጣን እጣ", stake: 10, totalSlots: 32, prizes: { first: 200, second: 50, third: 20 }, round: 101, timeLeft: 60, status: "betting", slots: {}, lastWinner: null },
+  "50": { id: "50", title: "የ50 ብር መደብ", stake: 50, totalSlots: 24, prizes: { first: 800, second: 150, third: 50 }, round: 85, timeLeft: 60, status: "betting", slots: {}, lastWinner: null },
+  "100": { id: "100", title: "የ100 ብር መደብ", stake: 100, totalSlots: 16, prizes: { first: 1000, second: 200, third: 100 }, round: 64, timeLeft: 60, status: "betting", slots: {}, lastWinner: null },
+  "300": { id: "300", title: "የ300 ብር VIP መደብ", stake: 300, totalSlots: 16, prizes: { first: 3000, second: 600, third: 300 }, round: 42, timeLeft: 60, status: "betting", slots: {}, lastWinner: null }
 };
 
-// የ1 ደቂቃ ቆጣሪ እና አውቶማቲክ ቦት
 setInterval(() => {
-    Object.values(rooms).forEach(room => {
-        if (room.status === "betting") {
-            room.timeLeft -= 1;
-            if (room.timeLeft <= 5 && room.timeLeft > 0) {
-                const empty = [];
-                for (let i = 1; i <= room.totalSlots; i++) if (!room.slots[i]) empty.push(i);
-                const fillCount = room.timeLeft === 1 ? empty.length : Math.ceil(empty.length / room.timeLeft);
-                for (let j = 0; j < fillCount; j++) {
-                    if (empty.length > 0) {
-                        const slotNum = empty.splice(Math.floor(Math.random() * empty.length), 1)[0];
-                        const botName = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
-                        room.slots[slotNum] = { name: botName, isBot: true, userId: "bot" };
-                    }
-                }
-            }
-            if (room.timeLeft <= 0) drawRoomWinner(room);
+  Object.values(rooms).forEach(room => {
+    if (room.status === "betting") {
+      room.timeLeft -= 1;
+      if (room.timeLeft <= 5 && room.timeLeft > 0) {
+        const empty = [];
+        for (let i = 1; i <= room.totalSlots; i++) if (!room.slots[i]) empty.push(i);
+        const fillCount = room.timeLeft === 1 ? empty.length : Math.ceil(empty.length / room.timeLeft);
+        for (let j = 0; j < fillCount; j++) {
+          if (empty.length > 0) {
+            const slotNum = empty.splice(Math.floor(Math.random() * empty.length), 1)[0];
+            const botName = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
+            room.slots[slotNum] = { name: botName, isBot: true, userId: "bot" };
+          }
         }
-    });
+      }
+      if (room.timeLeft <= 0) drawRoomWinner(room);
+    }
+  });
 }, 1000);
 
 function drawRoomWinner(room) {
-    room.status = "drawing";
-    const allSlots = Object.keys(room.slots).map(Number);
-    const botSlots = allSlots.filter(n => room.slots[n].isBot);
-    const realSlots = allSlots.filter(n => !room.slots[n].isBot);
+  room.status = "drawing";
+  const allSlots = Object.keys(room.slots).map(Number);
+  const botSlots = allSlots.filter(n => room.slots[n].isBot);
+  const realSlots = allSlots.filter(n => !room.slots[n].isBot);
 
-    let firstWinNum, secondWinNum, thirdWinNum;
+  let firstWinNum, secondWinNum, thirdWinNum;
 
-    if (botSlots.length === 0 && realSlots.length === room.totalSlots) {
-        const shuffled = [...realSlots].sort(() => 0.5 - Math.random());
-        [firstWinNum, secondWinNum, thirdWinNum] = shuffled;
-    } else {
-        const shuffledBots = [...botSlots].sort(() => 0.5 - Math.random());
-        firstWinNum = shuffledBots[0] || 1;
-        secondWinNum = shuffledBots[1] || shuffledBots[0] || 2;
-        const rem = allSlots.filter(n => n !== firstWinNum && n !== secondWinNum);
-        thirdWinNum = rem[Math.floor(Math.random() * rem.length)] || 3;
+  if (botSlots.length === 0 && realSlots.length === room.totalSlots) {
+    const shuffled = [...realSlots].sort(() => 0.5 - Math.random());
+    [firstWinNum, secondWinNum, thirdWinNum] = shuffled;
+  } else {
+    const shuffledBots = [...botSlots].sort(() => 0.5 - Math.random());
+    firstWinNum = shuffledBots[0] || 1;
+    secondWinNum = shuffledBots[1] || shuffledBots[0] || 2;
+    const rem = allSlots.filter(n => n !== firstWinNum && n !== secondWinNum);
+    thirdWinNum = rem[Math.floor(Math.random() * rem.length)] || 3;
+  }
+
+  const creditWinner = (slotNum, prize) => {
+    const slot = room.slots[slotNum];
+    if (slot && !slot.isBot && db.users[slot.userId]) {
+      db.users[slot.userId].balance += prize;
+      db.users[slot.userId].transactions.unshift({
+        type: `🏆 የእጣ ሽልማት (ዙር #${room.round})`, amount: prize, status: "Credited", time: "አሁን"
+      });
+      saveDB();
     }
+  };
 
-    const creditWinner = (slotNum, prize) => {
-        const slot = room.slots[slotNum];
-        if (slot && !slot.isBot && db.users[slot.userId]) {
-            db.users[slot.userId].balance += prize;
-            db.users[slot.userId].transactions.unshift({
-                type: `🏆 የእጣ ሽልማት (ዙር #${room.round})`, amount: prize, status: "Credited", time: "አሁን"
-            });
-            saveDB();
-        }
-    };
+  creditWinner(firstWinNum, room.prizes.first);
+  creditWinner(secondWinNum, room.prizes.second);
+  creditWinner(thirdWinNum, room.prizes.third);
 
-    creditWinner(firstWinNum, room.prizes.first);
-    creditWinner(secondWinNum, room.prizes.second);
-    creditWinner(thirdWinNum, room.prizes.third);
+  const fName = room.slots[firstWinNum]?.name || "ተጫዋች";
+  const sName = room.slots[secondWinNum]?.name || "ተጫዋች";
+  const tName = room.slots[thirdWinNum]?.name || "ተጫዋች";
 
-    const fName = room.slots[firstWinNum]?.name || "ተጫዋች";
-    const sName = room.slots[secondWinNum]?.name || "ተጫዋች";
-    const tName = room.slots[thirdWinNum]?.name || "ተጫዋች";
+  room.lastWinner = { round: room.round, firstNum: firstWinNum, firstName: fName, secondNum: secondWinNum, secondName: sName, thirdNum: thirdWinNum, thirdName: tName };
 
-    room.lastWinner = { round: room.round, firstNum: firstWinNum, firstName: fName, secondNum: secondWinNum, secondName: sName, thirdNum: thirdWinNum, thirdName: tName };
+  db.winnersHistory.unshift({
+    round: room.round, room: `${room.stake} ብር`,
+    first: `${fName} (#${firstWinNum}) - ${room.prizes.first} ብር`,
+    second: `${sName} (#${secondWinNum}) - ${room.prizes.second} ብር`,
+    third: `${tName} (#${thirdWinNum}) - ${room.prizes.third} ብር`
+  });
+  if (db.winnersHistory.length > 15) db.winnersHistory.pop();
+  saveDB();
 
-    db.winnersHistory.unshift({
-        round: room.round, room: `${room.stake} ብር`,
-        first: `${fName} (#${firstWinNum}) - ${room.prizes.first} ብር`,
-        second: `${sName} (#${secondWinNum}) - ${room.prizes.second} ብር`,
-        third: `${tName} (#${thirdWinNum}) - ${room.prizes.third} ብር`
+  setTimeout(() => {
+    room.round += 1; room.slots = {}; room.timeLeft = 60; room.status = "betting"; room.lastWinner = null;
+  }, 6000);
+}
+
+// ፕራይቬት ቴሌግራም መልዕክት ለተጫዋቾች መላኪያ ረዳት
+async function sendMessageToUser(chatId, text) {
+  if (!BOT_TOKEN) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'Markdown' })
     });
-    if (db.winnersHistory.length > 15) db.winnersHistory.pop();
-    saveDB();
-
-    setTimeout(() => {
-        room.round += 1; room.slots = {}; room.timeLeft = 60; room.status = "betting"; room.lastWinner = null;
-    }, 6000);
+  } catch (e) {}
 }
 
 app.get('/api/state', (req, res) => {
@@ -165,9 +172,9 @@ app.get('/api/state', (req, res) => {
       balance: 10, 
       referralsCount: 0, 
       referralEarned: 0, 
-      transactions: [
-        { type: "🎁 የእንኳን ደህና መጡ ነጻ ቦነስ", amount: 10, status: "Credited", time: "አሁን" }
-      ] 
+      referredBy: null,
+      hasDeposited: false,
+      transactions: [{ type: "🎁 የእንኳን ደህና መጡ ነጻ ቦነስ", amount: 10, status: "Credited", time: "አሁን" }] 
     };
     saveDB();
   }
@@ -175,33 +182,32 @@ app.get('/api/state', (req, res) => {
 });
 
 app.post('/api/buy', (req, res) => {
-    const { userId = "1001", roomId, numbers, playerName } = req.body;
-    const room = rooms[roomId];
-    const user = db.users[userId];
-    if (!room || room.status !== "betting") return res.status(400).json({ error: "ይህ ዙር ተዘግቷል!" });
+  const { userId = "1001", roomId, numbers, playerName } = req.body;
+  const room = rooms[roomId];
+  const user = db.users[userId];
+  if (!room || room.status !== "betting") return res.status(400).json({ error: "ይህ ዙር ተዘግቷል!" });
 
-    const available = numbers.filter(n => !room.slots[n]);
-    if (available.length === 0) return res.status(400).json({ error: "ቁጥሩ ተይዟል!" });
+  const available = numbers.filter(n => !room.slots[n]);
+  if (available.length === 0) return res.status(400).json({ error: "ቁጥሩ ተይዟል!" });
 
-    const totalCost = available.length * room.stake;
-    if (user.balance < totalCost) return res.status(400).json({ error: `በቂ ብር የለም! (${totalCost} ብር ያስፈልጋል)` });
+  const totalCost = available.length * room.stake;
+  if (user.balance < totalCost) return res.status(400).json({ error: `በቂ ብር የለም! (${totalCost} ብር ያስፈልጋል)` });
 
-    user.balance -= totalCost;
-    available.forEach(num => { room.slots[num] = { name: playerName || "ተጫዋች", isBot: false, userId }; });
-    user.transactions.unshift({ type: `🎟 ትኬት (${room.stake} ብር #${available.join(',')})`, amount: -totalCost, time: "አሁን" });
-    saveDB();
+  user.balance -= totalCost;
+  available.forEach(num => { room.slots[num] = { name: playerName || "ተጫዋች", isBot: false, userId }; });
+  user.transactions.unshift({ type: `🎟 ትኬት (${room.stake} ብር #${available.join(',')})`, amount: -totalCost, time: "አሁን" });
+  saveDB();
 
-    if (Object.keys(room.slots).length === room.totalSlots) drawRoomWinner(room);
-    res.json({ success: true, balance: user.balance });
+  if (Object.keys(room.slots).length === room.totalSlots) drawRoomWinner(room);
+  res.json({ success: true, balance: user.balance });
 });
 
-// ለአድሚኑ በቴሌግራም መልዕክት እና ስክሪንሾት መላኪያ ተግባር
 async function notifyAdmin(text, screenshot = null, buttons = null) {
   const adminId = db.adminChatId;
   if (!BOT_TOKEN || !adminId) return;
 
   const replyMarkup = buttons ? { inline_keyboard: buttons } : {
-    inline_keyboard: [[{ text: "🛠️ Admin Panel ክፈት", url: `${PUBLIC_URL}/admin.html` }]]
+    inline_keyboard: [[{ text: "🛠️ Admin Panel", url: `${PUBLIC_URL}/admin.html` }]]
   };
 
   try {
@@ -227,7 +233,6 @@ async function notifyAdmin(text, screenshot = null, buttons = null) {
   } catch (e) {}
 }
 
-// Deposit ወደ Admin ማረጋገጫ ይሄዳል
 app.post('/api/deposit', (req, res) => {
   const { userId = "1001", amount, ftNumber, screenshot } = req.body;
   const numAmount = Number(amount);
@@ -244,7 +249,6 @@ app.post('/api/deposit', (req, res) => {
   });
   saveDB();
 
-  // ወዲያውኑ ለአድሚኑ በቴሌግራም ማሳወቅ
   notifyAdmin(
     `🔔 አዲስ የ ${numAmount} ብር Deposit ጥያቄ ገብቷል!\n\n👤 ተጫዋች ID: ${userId}\n💵 መጠን: ${numAmount} ብር\n📩 ደረሰኝ/ሜሴጅ:\n${ftNumber}`,
     screenshot,
@@ -253,14 +257,13 @@ app.post('/api/deposit', (req, res) => {
         { text: "✅ አጽድቅ (Approve)", callback_data: `appdep_${depId}` },
         { text: "❌ ውድቅ አድርግ (Reject)", callback_data: `rejdep_${depId}` }
       ],
-      [{ text: "🛠️ Admin Panel ክፈት", url: `${PUBLIC_URL}/admin.html` }]
+      [{ text: "🛠️ Admin Panel", url: `${PUBLIC_URL}/admin.html` }]
     ]
   );
 
   res.json({ success: true });
 });
 
-// Withdraw ወደ Admin ይሄዳል
 app.post('/api/withdraw', (req, res) => {
   const { userId = "1001", amount, accountInfo } = req.body;
   const numAmount = Number(amount);
@@ -274,9 +277,8 @@ app.post('/api/withdraw', (req, res) => {
   user.transactions.unshift({ id: withId, type: `⏳ Withdraw በመጠባበቅ ላይ (${accountInfo})`, amount: -numAmount, time: "አሁን" });
   saveDB();
 
-  // ወዲያውኑ ለአድሚኑ በቴሌግራም ማሳወቅ
   notifyAdmin(
-    `💸 አዲስ የ ${numAmount} ብር Withdraw (ወጪ) ጥያቄ!\n\n👤 ተጫዋች ID: ${userId}\n💰 መጠን: ${numAmount} ብር\n🏦 አካውንት: ${accountInfo}`,
+    `💸 አዲስ የ ${numAmount} ብር Withdraw ጥያቄ!\n\n👤 ተጫዋች ID: ${userId}\n💰 መጠን: ${numAmount} ብር\n🏦 አካውንት: ${accountInfo}`,
     null,
     [
       [
@@ -289,11 +291,11 @@ app.post('/api/withdraw', (req, res) => {
   res.json({ success: true });
 });
 
-// ADMIN APIs
 app.get('/api/admin/data', (req, res) => {
   res.json({ pendingDeposits: db.pendingDeposits, pendingWithdrawals: db.pendingWithdrawals });
 });
 
+// የ Deposit አጽድቅ (Approve) እና ሪፈራል ክፍያ ተግባር
 function processDepositAction(id, action) {
   const idx = db.pendingDeposits.findIndex(d => d.id === id);
   if (idx === -1) return null;
@@ -303,6 +305,24 @@ function processDepositAction(id, action) {
     if (action === 'approve') {
       user.balance += dep.amount;
       user.transactions.unshift({ type: `✅ Deposit ጸድቋል`, amount: dep.amount, time: "አሁን" });
+
+      // 👥 ሪፈራል - የመጀመሪያ ዲፖዚት ከሆነና ጋባዥ (Inviter) ካለው 20 ብር መክፈል
+      if (user.referredBy && !user.hasDeposited) {
+        const inviterId = user.referredBy;
+        if (db.users[inviterId]) {
+          db.users[inviterId].balance += 20;
+          db.users[inviterId].referralsCount = (db.users[inviterId].referralsCount || 0) + 1;
+          db.users[inviterId].referralEarned = (db.users[inviterId].referralEarned || 0) + 20;
+          db.users[inviterId].transactions.unshift({
+            type: `👥 የሪፈራል ኮሚሽን (የተጋባዥ ID: ${dep.userId})`,
+            amount: 20,
+            status: "Credited",
+            time: "አሁን"
+          });
+          sendMessageToUser(inviterId, `👥 የሪፈራል ኮሚሽን ገቢ ተደረገ!\nየእርስዎ ጋባዥ (ID: ${dep.userId}) የመጀመሪያውን ዲፖዚት ስላደረገ የ 20 ብር ኮሚሽን ወደ ዋሌትዎ ገብቷል። 🎁`);
+        }
+      }
+      user.hasDeposited = true; // ዲፖዚት ማድረጉን መመዝገብ
     } else {
       user.transactions.unshift({ type: `❌ Deposit ውድቅ ተደርጓል`, amount: 0, time: "አሁን" });
     }
@@ -344,7 +364,6 @@ let botUsername = '';
 async function postWinnersToChannel() {
   if (!BOT_TOKEN || !db.channelId || db.winnersHistory.length === 0) return;
 
-  // የቅርብ ጊዜዎቹን 4 አሸናፊዎች ማውጣት
   const recentWinners = db.winnersHistory.slice(0, 4).map(w =>
     `🏅 *ዙር #${w.round} (${w.room} መደብ)*\n   🥇 1ኛ: ${w.first}\n   🥈 2ኛ: ${w.second}\n   🥉 3ኛ: ${w.third}`
   ).join('\n\n');
@@ -357,7 +376,6 @@ async function postWinnersToChannel() {
     `ከ 10 ብር እስከ 300 ብር መደቦች ገብተው እድልዎን ይሞክሩ!\n` +
     `👇 *ለመጫወት ከታች ያለውን ቁልፍ ይጫኑ፦*`;
 
-  // በቻናል ላይ የሚሰራ ቀጥታ ወደ ቦቱ መግቢያ ሊንክ
   const playUrl = botUsername ? `https://t.me/${botUsername}?start=channel` : PUBLIC_URL;
 
   try {
@@ -378,7 +396,6 @@ async function postWinnersToChannel() {
   } catch (e) {}
 }
 
-// በየ 1 ሰዓቱ (3,600,000 ሚሊሰከንድ) በራሱ ወደ ቻናሉ እንዲለጥፍ ማድረግ
 setInterval(postWinnersToChannel, 60 * 60 * 1000);
 
 // Telegram Bot ማስነሻ
@@ -386,7 +403,6 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
   let lastUpdateId = 0;
   console.log('🤖 የቴሌግራም ቦቱ በቀጥታ ተገናኝቷል!');
 
-  // የቦቱን Username በራሱ እንዲያውቀው ማድረግ
   fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMe`)
     .then(r => r.json())
     .then(d => { if (d.ok) botUsername = d.result.username; })
@@ -400,7 +416,6 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
         for (const update of data.result) {
           lastUpdateId = update.update_id;
 
-          // አድሚኑ ከቴሌግራም ላይ በቀጥታ Approve/Reject ሲነካ
           if (update.callback_query) {
             const cb = update.callback_query;
             const cbData = cb.data || '';
@@ -430,12 +445,10 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             });
           }
 
-          // ከቻት ወይም ከቻናል የሚመጣ መልዕክት መቀበል
           const msg = update.message || update.channel_post;
           if (!msg || !msg.text) continue;
-          const chatId = msg.chat.id;
+          const chatId = String(msg.chat.id);
 
-          // 1. አድሚን መመዝገቢያ (/setadmin)
           if (msg.text.startsWith('/setadmin')) {
             db.adminChatId = chatId;
             saveDB();
@@ -443,15 +456,13 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 chat_id: chatId,
-                text: `✅ እንኳን ደስ አለዎት! የእርስዎ ቴሌግራም (ID: ${chatId}) እንደ ዋና አድሚን ተመዝግቧል!`
+                text: `✅ እንኳን ደስ አለዎት! የእርስዎ ቴሌግራም (ID: ${chatId}) እንደ ዋና አድሚን ተመዝግቧል!\nከአሁን ጀምሮ ማንኛውም Deposit ስክሪንሾት እና የሜሴጅ ማረጋገጫ እዚህ ይደርስዎታል።`
               })
             });
           }
 
-          // 2. ቻናል ወይም ግሩፕ ማገናኛ (/setchannel)
           if (msg.text.startsWith('/setchannel')) {
             const parts = msg.text.split(' ');
-            // በግል ቻት '/setchannel @ChannelName' ካለ ወይም ቀጥታ ቻናሉ ውስጥ '/setchannel' ብሎ ከጻፈ
             const targetChannel = parts[1] ? parts[1].trim() : chatId;
             db.channelId = targetChannel;
             saveDB();
@@ -463,19 +474,39 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
                 text: `✅ ቻናሉ (${targetChannel}) በትክክል ተገናኝቷል! ከአሁን ጀምሮ በየ 1 ሰዓቱ አሸናፊዎችን በራሱ ይለጥፋል።\nየመጀመሪያው የሙከራ ፖስት አሁን ተልኳል!`
               })
             });
-
-            // ወዲያውኑ ለሙከራ አንድ ፖስት ወደ ቻናሉ መላክ
             await postWinnersToChannel();
           }
 
-          // 3. በማንኛውም ሰዓት ወዲያውኑ ወደ ቻናሉ እንዲለጥፍ ለማዘዝ (/postnow)
           if (msg.text.startsWith('/postnow')) {
             await postWinnersToChannel();
           }
 
-          // 4. ተጫዋቾች /start ሲሉ
           if (msg.text.startsWith('/start')) {
             const firstName = msg.from?.first_name || 'ተጫዋች';
+
+            // 👥 ሪፈራል መመዝገቢያ ሎጂክ
+            if (!db.users[chatId]) {
+              db.users[chatId] = {
+                balance: 10,
+                referralsCount: 0,
+                referralEarned: 0,
+                referredBy: null,
+                hasDeposited: false,
+                transactions: [{ type: "🎁 የእንኳን ደህና መጡ ነጻ ቦነስ", amount: 10, status: "Credited", time: "አሁን" }]
+              };
+            }
+
+            const parts = msg.text.split(' ');
+            if (parts[1] && parts[1].startsWith('ref_')) {
+              const inviterId = parts[1].replace('ref_', '');
+              // ራሱን እንዳይጋብዝ እና ቀድሞ ዲፖዚት ያላደረገ አዲስ ሰው መሆኑን ማረጋገጥ
+              if (inviterId !== chatId && db.users[inviterId] && !db.users[chatId].referredBy && !db.users[chatId].hasDeposited) {
+                db.users[chatId].referredBy = inviterId;
+                saveDB();
+                sendMessageToUser(inviterId, `👥 አንድ ሰው በእርስዎ ሊንክ ገብቷል!\nመጀመሪያ ዲፖዚት (Deposit) ሲያደርግና ሲጸድቅ የ 20 ብር ኮሚሽን ወደ ዋሌትዎ ይገባል! 🎁`);
+              }
+            }
+
             await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
