@@ -167,13 +167,8 @@
         }
 
         @keyframes pulse {
-            from {
-                transform: scale(1);
-            }
-
-            to {
-                transform: scale(1.06);
-            }
+            from { transform: scale(1); }
+            to { transform: scale(1.06); }
         }
 
         .prizes-grid {
@@ -385,21 +380,18 @@
         <h1>🌺 ደረሰኝ ፈጣን እጣ</h1>
         <div class="wallet-pill" onclick="switchTab('wallet', document.getElementById('nav-wallet'))">
             <span>ዋሌት:</span>
-            <strong id="top-balance">1,000 ብር</strong>
+            <strong id="top-balance">10 ብር</strong>
             <span class="wallet-add">+</span>
         </div>
     </div>
 
     <!-- TAB 1: መጫወቻ (PLAY) -->
     <div id="tab-play" class="tab-content active">
-        <!-- 4 የመደብ ምርጫዎች -->
         <div class="room-tabs">
             <div class="room-btn" onclick="selectRoom('10')" id="rbtn-10"><strong>10 ብር</strong><span>32 ቦታ</span></div>
             <div class="room-btn" onclick="selectRoom('50')" id="rbtn-50"><strong>50 ብር</strong><span>24 ቦታ</span></div>
-            <div class="room-btn" onclick="selectRoom('100')" id="rbtn-100"><strong>100 ብር</strong><span>16 ቦታ</span>
-            </div>
-            <div class="room-btn active" onclick="selectRoom('300')" id="rbtn-300"><strong>300 ብር</strong><span>16
-                    ቦታ</span></div>
+            <div class="room-btn" onclick="selectRoom('100')" id="rbtn-100"><strong>100 ብር</strong><span>16 ቦታ</span></div>
+            <div class="room-btn active" onclick="selectRoom('300')" id="rbtn-300"><strong>300 ብር</strong><span>16 ቦታ</span></div>
         </div>
 
         <div class="prize-banner">
@@ -414,7 +406,6 @@
             </div>
         </div>
 
-        <!-- አሸናፊ ሲወጣ የሚታይ -->
         <div class="winner-alert" id="winner-banner"></div>
 
         <div class="progress-label">
@@ -426,8 +417,7 @@
         </div>
 
         <div style="margin-bottom: 10px;">
-            <input type="text" id="playerName" class="input-field" style="margin:0;"
-                placeholder="የእርስዎ መጫወቻ ስም (ምሳሌ: Selman)">
+            <input type="text" id="playerName" class="input-field" style="margin:0;" placeholder="የእርስዎ መጫወቻ ስም (ምሳሌ: Selman)">
         </div>
 
         <div class="numbers-grid" id="grid"></div>
@@ -439,20 +429,30 @@
     <div id="tab-wallet" class="tab-content">
         <div class="info-card" style="text-align: center; background: linear-gradient(135deg, #1e293b, #0f172a);">
             <span style="font-size: 12px; color: var(--muted);">ያለዎት ጠቅላላ ቀሪ ሂሳብ (Available Balance)</span>
-            <h2 id="wallet-big-balance" style="font-size: 28px; color: var(--gold); margin: 6px 0;">1,000 ብር</h2>
+            <h2 id="wallet-big-balance" style="font-size: 28px; color: var(--gold); margin: 6px 0;">10 ብር</h2>
         </div>
 
         <!-- Deposit Form -->
         <div class="info-card">
             <h3 style="font-size: 14px; margin-bottom: 6px; color: var(--accent);">📥 ብር ወደ ዋሌት ማስገቢያ (Deposit)</h3>
-            <div
-                style="font-size: 12px; color: #cbd5e1; background: #0b1120; padding: 8px; border-radius: 8px; margin-bottom: 8px;">
-                🏦 <b>CBE:</b> 1000608678089 (Mekides Kifle)<br>
-                📱 <b>Telebirr:</b> 0942556419 (Feruza)
+            <div style="font-size: 12px; color: #cbd5e1; background: #0b1120; padding: 10px; border-radius: 8px; margin-bottom: 8px; line-height: 1.9;">
+                🏦 <b>CBE:</b> <code style="color:#fde047;">1000608678089</code> (Mekides Kifle)
+                <button onclick="navigator.clipboard.writeText('1000608678089'); alert('የCBE ቁጥር ኮፒ ተደርጓል!');" style="background:#334155; color:#fff; border:none; padding:2px 6px; border-radius:4px; font-size:10px; cursor:pointer;">Copy</button><br>
+                📱 <b>Telebirr:</b> <code style="color:#fde047;">0942556419</code> (Feruza)
+                <button onclick="navigator.clipboard.writeText('0942556419'); alert('የቴሌብር ቁጥር ኮፒ ተደርጓል!');" style="background:#334155; color:#fff; border:none; padding:2px 6px; border-radius:4px; font-size:10px; cursor:pointer;">Copy</button>
             </div>
-            <input type="number" id="dep-amount" class="input-field" placeholder="የላኩት የብር መጠን (ምሳሌ: 1000)">
-            <input type="text" id="dep-ft" class="input-field" placeholder="የደረሰኝ ቁጥር (FT / Transaction ID)">
-            <button class="btn-main" onclick="handleDeposit()">✅ ብር ወደ ዋሌት አስገባ</button>
+            
+            <input type="number" id="dep-amount" class="input-field" placeholder="1. የላኩት የብር መጠን (ምሳሌ: 1000)">
+            <textarea id="dep-ft" class="input-field" rows="3" placeholder="2. የደረሰኝ ሜሴጁን እዚህ Copy-Paste ያድርጉ (ወይም FT ቁጥሩን ይጻፉ)"></textarea>
+            
+            <div style="margin: 6px 0 12px; background: #0f172a; padding: 10px; border-radius: 8px; border: 1px dashed #475569;">
+                <label style="font-size: 12px; color: #fde047; display: block; margin-bottom: 6px; cursor: pointer;">
+                    📸 3. ወይም የደረሰኝ ስክሪንሾት (Screenshot) ይምረጡ፦
+                </label>
+                <input type="file" id="dep-image" accept="image/*" style="font-size: 12px; color: #cbd5e1; width: 100%;">
+            </div>
+
+            <button class="btn-main" id="dep-btn" onclick="handleDeposit()">✅ ደረሰኝ ላክና ወደ ዋሌት አስገባ</button>
         </div>
 
         <!-- Withdraw Form -->
@@ -460,8 +460,7 @@
             <h3 style="font-size: 14px; margin-bottom: 6px; color: var(--gold);">📤 ብር ወጪ መጠየቂያ (Withdraw)</h3>
             <input type="number" id="with-amount" class="input-field" placeholder="ወጪ የሚሆን የብር መጠን (ዝቅተኛ 50 ብር)">
             <input type="text" id="with-account" class="input-field" placeholder="CBE ወይም Telebirr ቁጥር እና ስም">
-            <button class="btn-main" style="background: var(--gold); color: #000;" onclick="handleWithdraw()">💸 ወጪ አድርግ
-                (Withdraw)</button>
+            <button class="btn-main" style="background: var(--gold); color: #000;" onclick="handleWithdraw()">💸 ወጪ አድርግ (Withdraw)</button>
         </div>
 
         <!-- Transaction History -->
@@ -474,15 +473,24 @@
     <!-- TAB 3: ኮሚሽን (INVITE) -->
     <div id="tab-invite" class="tab-content">
         <div class="info-card">
-            <h3 style="margin-bottom: 6px;">👥 ጓደኛ ይጋብዙ (20 ብር ኮሚሽን)</h3>
-            <p style="font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 10px;">
-                በእርስዎ ሊንክ የሚገባ ሰው ዲፖዚት አድርጎ ሲጫወት ወዲያውኑ ወደ ዋሌትዎ የሚገባ ኮሚሽን ያገኛሉ!
+            <h3 style="margin-bottom: 6px; color: var(--gold);">👥 ጓደኛ ይጋብዙ (20 ብር ኮሚሽን)</h3>
+            <p style="font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 12px;">
+                በእርስዎ ሊንክ የሚገባ አዲስ ተጫዋች የመጀመሪያውን Deposit ሲያደርግ፣ ወዲያውኑ <b>20 ብር</b> ወደ ዋሌትዎ ይገባል!
             </p>
-            <div class="input-field" id="ref-link" style="word-break: break-all;">
-                https://t.me/DeresegnBot?start=ref_1001</div>
-            <button class="btn-main"
-                onclick="navigator.clipboard.writeText(document.getElementById('ref-link').innerText); alert('ሊንኩ ኮፒ ተደርጓል!');">📋
-                ሊንኩን ኮፒ አድርግ</button>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; text-align: center;">
+                <div style="background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #334155;">
+                    <span style="font-size: 11px; color: var(--muted); display: block;">የጋበዟቸው ሰዎች</span>
+                    <strong id="ref-count" style="font-size: 18px; color: #fff;">0</strong>
+                </div>
+                <div style="background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #334155;">
+                    <span style="font-size: 11px; color: var(--muted); display: block;">ያገኙት ኮሚሽን</span>
+                    <strong id="ref-earned" style="font-size: 18px; color: var(--accent);">0 ብር</strong>
+                </div>
+            </div>
+
+            <div class="input-field" id="ref-link" style="word-break: break-all; color: #fde047; font-weight: bold;">በመጫን ላይ...</div>
+            <button class="btn-main" onclick="navigator.clipboard.writeText(document.getElementById('ref-link').innerText); alert('✅ የመጋበዣ ሊንክዎ ኮፒ ተደርጓል! ለጓደኞችዎ ይላኩ።');">📋 ሊንኩን ኮፒ አድርግ (Copy Link)</button>
         </div>
     </div>
 
@@ -523,17 +531,25 @@
                 const res = await fetch(`/api/state?userId=${userId}`);
                 appState = await res.json();
                 renderUI();
-            } catch (e) { }
+            } catch (e) {}
         }
 
         function renderUI() {
             if (!appState) return;
-            const { user, rooms, winnersHistory } = appState;
+            const { user, rooms, winnersHistory, botUsername } = appState;
             const room = rooms[currentRoomId];
 
             // Balance
             document.getElementById('top-balance').innerText = `${user.balance.toLocaleString()} ብር`;
             document.getElementById('wallet-big-balance').innerText = `${user.balance.toLocaleString()} ብር`;
+
+            // 👥 ትክክለኛውን የቦት ስም እና የተጫዋቹን ID በሪፈራል ሊንኩ ላይ ማስገባት
+            const realBot = botUsername || 'DeresegnBot';
+            document.getElementById('ref-link').innerText = `https://t.me/${realBot}?start=ref_${userId}`;
+            if (document.getElementById('ref-count')) {
+                document.getElementById('ref-count').innerText = user.referralsCount || 0;
+                document.getElementById('ref-earned').innerText = `${user.referralEarned || 0} ብር`;
+            }
 
             // Room Header & Prizes
             document.getElementById('room-title').innerText = `ዙር #${room.round} • ${room.title}`;
@@ -597,21 +613,21 @@
 
             // Transactions
             document.getElementById('tx-list').innerHTML = user.transactions.map(t => `
-      <div class="tx-item">
-        <span>${t.type}</span>
-        <strong style="color:${t.amount > 0 ? '#10b981' : '#f8fafc'}">${t.amount > 0 ? '+' + t.amount : t.amount} ብር</strong>
-      </div>
-    `).join('');
+                <div class="tx-item">
+                    <span>${t.type}</span>
+                    <strong style="color:${t.amount > 0 ? '#10b981' : '#f8fafc'}">${t.amount > 0 ? '+' + t.amount : t.amount} ብር</strong>
+                </div>
+            `).join('');
 
             // Winners History
             document.getElementById('winners-list').innerHTML = winnersHistory.map(w => `
-      <div class="info-card">
-        <strong style="color:var(--gold); font-size:13px;">🏅 ዙር #${w.round} (${w.room} መደብ)</strong>
-        <div style="font-size:12px; margin-top:5px; line-height:1.6;">
-          🥇 1ኛ: ${w.first}<br>🥈 2ኛ: ${w.second}<br>🥉 3ኛ: ${w.third}
-        </div>
-      </div>
-    `).join('');
+                <div class="info-card">
+                    <strong style="color:var(--gold); font-size:13px;">🏅 ዙር #${w.round} (${w.room} መደብ)</strong>
+                    <div style="font-size:12px; margin-top:5px; line-height:1.6;">
+                        🥇 1ኛ: ${w.first}<br>🥈 2ኛ: ${w.second}<br>🥉 3ኛ: ${w.third}
+                    </div>
+                </div>
+            `).join('');
         }
 
         function toggleSlot(num) {
@@ -635,19 +651,63 @@
             fetchState();
         }
 
+        function compressImage(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const maxW = 700;
+                        const scale = img.width > maxW ? maxW / img.width : 1;
+                        canvas.width = img.width * scale;
+                        canvas.height = img.height * scale;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
         async function handleDeposit() {
             const amount = document.getElementById('dep-amount').value;
             const ftNumber = document.getElementById('dep-ft').value.trim();
+            const fileInput = document.getElementById('dep-image');
+            const btn = document.getElementById('dep-btn');
+
+            if (!amount || Number(amount) < 10) {
+                return alert('እባክዎ የላኩትን ትክክለኛ የብር መጠን ያስገቡ!');
+            }
+            if (!ftNumber && (!fileInput.files || fileInput.files.length === 0)) {
+                return alert('እባክዎ የደረሰኙን ሜሴጅ (FT) ይጻፉ ወይም ስክሪንሾት (ፎቶ) ይምረጡ!');
+            }
+
+            btn.innerText = '⏳ በመላክ ላይ...';
+            btn.disabled = true;
+
+            let screenshot = null;
+            if (fileInput.files && fileInput.files[0]) {
+                screenshot = await compressImage(fileInput.files[0]);
+            }
+
             const res = await fetch('/api/deposit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, amount, ftNumber })
+                body: JSON.stringify({ userId, amount, ftNumber: ftNumber || 'በስክሪንሾት የተላከ', screenshot })
             });
             const data = await res.json();
+
+            btn.innerText = '✅ ደረሰኝ ላክና ወደ ዋሌት አስገባ';
+            btn.disabled = false;
+
             if (data.error) return alert(data.error);
             document.getElementById('dep-amount').value = '';
             document.getElementById('dep-ft').value = '';
-            alert('✅ ብሩ ወደ ዋሌትዎ ገብቷል!');
+            fileInput.value = '';
+            alert('✅ ደረሰኝዎ ለአድሚን ተልኳል! እንደተረጋገጠ ወዲያው ወደ ዋሌትዎ ይገባል።');
             fetchState();
         }
 
@@ -673,7 +733,6 @@
             el.classList.add('active');
         }
 
-        // በየ1 ሰከንዱ ቆጣሪውን እና የተያዙ ቁጥሮችን ከሰርቨር ማዘመን
         setInterval(fetchState, 1000);
         fetchState();
     </script>
