@@ -6,7 +6,7 @@ const fs = require('fs');
 const mongoose = require('mongoose');
 
 const BOT_TOKEN = '9287818773:AAFMcBPcMlqRMjDx4YOv6OtabZBFi8TDTIs';
-const PUBLIC_URL = 'https://deresegn-bot.onrender.com';
+const PUBLIC_URL = process.env.RENDER_EXTERNAL_URL || 'https://deresegn-bot.onrender.com';
 const MONGO_URI = 'mongodb+srv://selmantoon_db_user:nb7Kam5fxPcwWWS8@cluster0.jdz7hsp.mongodb.net/deresegnbot?retryWrites=true&w=majority';
 
 const app = express();
