@@ -731,8 +731,19 @@
             el.classList.add('active');
         }
 
-        setInterval(fetchState, 1000);
-        fetchState();
+       // በየ 3 ሰከንዱ ብቻ ከሰርቨር ዳታ ማምጣት (Bandwidth በ 70% ይቆጥባል)
+setInterval(fetchState, 3000);
+
+// ሰዓቱን ግን በየ 1 ሰከንዱ ስልኩ ላይ ያለ ኢንተርኔት መቁጠር
+setInterval(() => {
+    if (appState && appState.rooms) {
+        Object.values(appState.rooms).forEach(r => {
+            if (r.status === 'betting' && r.timeLeft > 0) r.timeLeft--;
+        });
+        renderUI();
+    }
+}, 1000);
+fetchState();
     </script>
 </body>
 
