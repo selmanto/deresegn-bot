@@ -744,6 +744,9 @@ setInterval(() => {
     }
 }, 1000);
 fetchState();
+        if (new URLSearchParams(window.location.search).get('tab') === 'wallet') {
+    switchTab('wallet', document.getElementById('nav-wallet'));
+}
     </script>
 </body>
 
