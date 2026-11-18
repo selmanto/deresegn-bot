@@ -24,7 +24,7 @@ const BOT_NAMES = [
 
 let db = {
   users: {
-    "1001": { balance: 10, referralsCount: 0, referralEarned: 0, referredBy: null, hasDeposited: false, transactions: [] }
+    "1001": { balance: 10, phone: null, bonusClaimed: true, referralsCount: 0, referralEarned: 0, referredBy: null, hasDeposited: false, transactions: [] }
   },
   pendingDeposits: [],
   pendingWithdrawals: [],
@@ -153,28 +153,31 @@ function drawRoomWinner(room) {
   }, 6000);
 }
 
-// ፕራይቬት ቴሌግራም መልዕክት ለተጫዋቾች መላኪያ ረዳት
-async function sendMessageToUser(chatId, text) {
+async function sendMessageToUser(chatId, text, extra = {}) {
   if (!BOT_TOKEN) return;
   try {
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'Markdown' })
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown', ...extra })
     });
   } catch (e) {}
 }
+
+let botUsername = '';
 
 app.get('/api/state', (req, res) => {
   const userId = req.query.userId || "1001";
   if (!db.users[userId]) {
     db.users[userId] = { 
-      balance: 10, 
+      balance: 0, 
+      phone: null,
+      bonusClaimed: false,
       referralsCount: 0, 
       referralEarned: 0, 
       referredBy: null,
       hasDeposited: false,
-      transactions: [{ type: "🎁 የእንኳን ደህና መጡ ነጻ ቦነስ", amount: 10, status: "Credited", time: "አሁን" }] 
+      transactions: [{ type: "ℹ️ የ10 ብር ነጻ ቦነስ ለማግኘት በቦቱ ላይ ስልክዎን ያጋሩ", amount: 0, status: "Info", time: "አሁን" }] 
     };
     saveDB();
   }
@@ -240,17 +243,18 @@ app.post('/api/deposit', (req, res) => {
     return res.status(400).json({ error: "ትክክለኛ መጠን እና ደረሰኝ ያስገቡ!" });
   }
 
+  const user = db.users[userId];
   const depId = 'dep_' + Date.now();
   db.pendingDeposits.unshift({
-    id: depId, userId, amount: numAmount, ftNumber: ftNumber || 'ፎቶ ብቻ', screenshot: screenshot || null, time: new Date().toLocaleTimeString()
+    id: depId, userId, phone: user?.phone || 'አልተመዘገበም', amount: numAmount, ftNumber: ftNumber || 'ፎቶ ብቻ', screenshot: screenshot || null, time: new Date().toLocaleTimeString()
   });
-  db.users[userId].transactions.unshift({
+  user.transactions.unshift({
     id: depId, type: `⏳ Deposit በመጠባበቅ ላይ`, amount: numAmount, time: "አሁን"
   });
   saveDB();
 
   notifyAdmin(
-    `🔔 አዲስ የ ${numAmount} ብር Deposit ጥያቄ ገብቷል!\n\n👤 ተጫዋች ID: ${userId}\n💵 መጠን: ${numAmount} ብር\n📩 ደረሰኝ/ሜሴጅ:\n${ftNumber}`,
+    `🔔 አዲስ የ ${numAmount} ብር Deposit ጥያቄ ገብቷል!\n\n👤 ተጫዋች ID: ${userId}\n📱 ስልክ: ${user?.phone || 'አልተመዘገበም'}\n💵 መጠን: ${numAmount} ብር\n📩 ደረሰኝ/ሜሴጅ:\n${ftNumber}`,
     screenshot,
     [
       [
@@ -273,12 +277,12 @@ app.post('/api/withdraw', (req, res) => {
 
   user.balance -= numAmount;
   const withId = 'with_' + Date.now();
-  db.pendingWithdrawals.unshift({ id: withId, userId, amount: numAmount, accountInfo, time: new Date().toLocaleTimeString() });
+  db.pendingWithdrawals.unshift({ id: withId, userId, phone: user?.phone || 'አልተመዘገበም', amount: numAmount, accountInfo, time: new Date().toLocaleTimeString() });
   user.transactions.unshift({ id: withId, type: `⏳ Withdraw በመጠባበቅ ላይ (${accountInfo})`, amount: -numAmount, time: "አሁን" });
   saveDB();
 
   notifyAdmin(
-    `💸 አዲስ የ ${numAmount} ብር Withdraw ጥያቄ!\n\n👤 ተጫዋች ID: ${userId}\n💰 መጠን: ${numAmount} ብር\n🏦 አካውንት: ${accountInfo}`,
+    `💸 አዲስ የ ${numAmount} ብር Withdraw ጥያቄ!\n\n👤 ተጫዋች ID: ${userId}\n📱 የተመዘገበ ስልክ: ${user?.phone || 'አልተመዘገበም'}\n💰 መጠን: ${numAmount} ብር\n🏦 አካውንት: ${accountInfo}`,
     null,
     [
       [
@@ -295,7 +299,6 @@ app.get('/api/admin/data', (req, res) => {
   res.json({ pendingDeposits: db.pendingDeposits, pendingWithdrawals: db.pendingWithdrawals });
 });
 
-// የ Deposit አጽድቅ (Approve) እና ሪፈራል ክፍያ ተግባር
 function processDepositAction(id, action) {
   const idx = db.pendingDeposits.findIndex(d => d.id === id);
   if (idx === -1) return null;
@@ -306,7 +309,6 @@ function processDepositAction(id, action) {
       user.balance += dep.amount;
       user.transactions.unshift({ type: `✅ Deposit ጸድቋል`, amount: dep.amount, time: "አሁን" });
 
-      // 👥 ሪፈራል - የመጀመሪያ ዲፖዚት ከሆነና ጋባዥ (Inviter) ካለው 20 ብር መክፈል
       if (user.referredBy && !user.hasDeposited) {
         const inviterId = user.referredBy;
         if (db.users[inviterId]) {
@@ -319,12 +321,14 @@ function processDepositAction(id, action) {
             status: "Credited",
             time: "አሁን"
           });
-          sendMessageToUser(inviterId, `👥 የሪፈራል ኮሚሽን ገቢ ተደረገ!\nየእርስዎ ጋባዥ (ID: ${dep.userId}) የመጀመሪያውን ዲፖዚት ስላደረገ የ 20 ብር ኮሚሽን ወደ ዋሌትዎ ገብቷል። 🎁`);
+          sendMessageToUser(inviterId, `👥 *የሪፈራል ኮሚሽን ገቢ ተደረገ!*\nየእርስዎ ተጋባዥ የመጀመሪያውን ዲፖዚት ስላደረገ የ *20 ብር* ኮሚሽን ወደ ዋሌትዎ ገብቷል። 🎁`);
         }
       }
-      user.hasDeposited = true; // ዲፖዚት ማድረጉን መመዝገብ
+      user.hasDeposited = true;
+      sendMessageToUser(dep.userId, `✅ የ *${dep.amount} ብር* Deposit ጥያቄዎ ጸድቶ ወደ ዋሌትዎ ገብቷል! መልካም እድል! 🎲`);
     } else {
       user.transactions.unshift({ type: `❌ Deposit ውድቅ ተደርጓል`, amount: 0, time: "አሁን" });
+      sendMessageToUser(dep.userId, `❌ የላኩት የ ${dep.amount} ብር Deposit ደረሰኝ ትክክል ባለመሆኑ ውድቅ ተደርጓል።`);
     }
   }
   saveDB();
@@ -339,9 +343,11 @@ function processWithdrawAction(id, action) {
   if (user) {
     if (action === 'approve') {
       user.transactions.unshift({ type: `✅ Withdraw ተከፍሏል (${w.accountInfo})`, amount: -w.amount, time: "አሁን" });
+      sendMessageToUser(w.userId, `💸 የጠየቁት የ *${w.amount} ብር* ወጪ (Withdraw) ወደ *${w.accountInfo}* ተልኳል! 🎉`);
     } else {
       user.balance += w.amount;
       user.transactions.unshift({ type: `↩️ Withdraw ተመልሷል`, amount: w.amount, time: "አሁን" });
+      sendMessageToUser(w.userId, `↩️ የጠየቁት የ ${w.amount} ብር ወጪ ተመላሽ ተደርጎ ወደ ዋሌትዎ ገብቷል።`);
     }
   }
   saveDB();
@@ -357,9 +363,6 @@ app.post('/api/admin/withdraw-action', (req, res) => {
   processWithdrawAction(req.body.id, req.body.action);
   res.json({ success: true });
 });
-
-// በየ1 ሰዓቱ ወደ ቴሌግራም ቻናል/ግሩፕ አሸናፊዎችን መለጠፊያ ተግባር
-let botUsername = '';
 
 async function postWinnersToChannel() {
   if (!BOT_TOKEN || !db.channelId || db.winnersHistory.length === 0) return;
@@ -419,8 +422,36 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
           if (update.callback_query) {
             const cb = update.callback_query;
             const cbData = cb.data || '';
-            let replyText = '';
+            const callerId = String(cb.from.id);
 
+            if (cbData === 'check_balance') {
+              const u = db.users[callerId] || { balance: 0, phone: null };
+              const balMsg = `💰 የእርስዎ ቀሪ ሂሳብ: ${u.balance} ብር\n📱 ስልክ: ${u.phone || 'አልተረጋገጠም (10 ብር ቦነስ ለማግኘት ስልክዎን ያጋሩ)'}`;
+              await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ callback_query_id: cb.id, text: balMsg, show_alert: true })
+              });
+              continue;
+            }
+
+            if (cbData === 'my_invite') {
+              const u = db.users[callerId] || { referralsCount: 0, referralEarned: 0 };
+              const refLink = `https://t.me/${botUsername || 'DeresegnBot'}?start=ref_${callerId}`;
+              await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ callback_query_id: cb.id })
+              });
+              await sendMessageToUser(
+                callerId,
+                `👥 *ጓደኛ ይጋብዙ — 20 ብር ኮሚሽን ያግኙ!*\n\n` +
+                `📊 የጋበዟቸው ሰዎች: *${u.referralsCount || 0}*\n` +
+                `💵 ያገኙት ኮሚሽን: *${u.referralEarned || 0} ብር*\n\n` +
+                `👇 የእርስዎ መጋበዣ ሊንክ (ለጓደኞችዎ ይላኩት)፦\n${refLink}`
+              );
+              continue;
+            }
+
+            let replyText = '';
             if (cbData.startsWith('appdep_')) {
               const d = processDepositAction(cbData.replace('appdep_', ''), 'approve');
               replyText = d ? `✅ የ ${d.amount} ብር Deposit ጸድቋል!` : '⚠️ ይህ ጥያቄ ቀድሞ ተስተናግዷል።';
@@ -435,30 +466,67 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
               replyText = w ? `↩️ የ ${w.amount} ብር ወጪ ተመላሽ ተደርጓል!` : '⚠️ ቀድሞ ተስተናግዷል።';
             }
 
-            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ callback_query_id: cb.id, text: replyText, show_alert: true })
-            });
-            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ chat_id: cb.message.chat.id, text: replyText })
-            });
+            if (replyText) {
+              await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ callback_query_id: cb.id, text: replyText, show_alert: true })
+              });
+              await sendMessageToUser(cb.message.chat.id, replyText);
+            }
           }
 
           const msg = update.message || update.channel_post;
-          if (!msg || !msg.text) continue;
+          if (!msg) continue;
           const chatId = String(msg.chat.id);
+
+          // 📱 ተጫዋቹ ስልክ ቁጥሩን ሲያጋራ (Share Phone Number)
+          if (msg.contact) {
+            if (String(msg.contact.user_id) !== String(msg.from?.id)) {
+              await sendMessageToUser(chatId, `⚠️ እባክዎ የራስዎን ትክክለኛ የቴሌግራም ስልክ ቁጥር ብቻ ያጋሩ!`);
+              continue;
+            }
+
+            const rawPhone = msg.contact.phone_number.replace(/\+/g, '');
+            if (!db.users[chatId]) {
+              db.users[chatId] = { balance: 0, phone: null, bonusClaimed: false, referralsCount: 0, referralEarned: 0, referredBy: null, hasDeposited: false, transactions: [] };
+            }
+
+            if (!rawPhone.startsWith('251')) {
+              await sendMessageToUser(chatId, `❌ የነጻ ቦነስ የሚሰጠው ለኢትዮጵያ (+251) ስልክ ቁጥሮች ብቻ ነው!`, {
+                reply_markup: { remove_keyboard: true }
+              });
+              continue;
+            }
+
+            db.users[chatId].phone = '+' + rawPhone;
+            if (!db.users[chatId].bonusClaimed) {
+              db.users[chatId].bonusClaimed = true;
+              db.users[chatId].balance += 10;
+              db.users[chatId].transactions.unshift({
+                type: "🎁 ስልክ በማረጋገጥ የተገኘ ነጻ ቦነስ", amount: 10, status: "Credited", time: "አሁን"
+              });
+              saveDB();
+
+              await sendMessageToUser(
+                chatId,
+                `✅ *ስልክ ቁጥርዎ (+${rawPhone}) ተረጋግጧል!*\n🎁 የ *10 ብር ነጻ መጫወቻ ቦነስ* ወደ ዋሌትዎ ገብቷል! ከላይ *Play Now* የሚለውን ነክተው መጫወት ይችላሉ።`,
+                { reply_markup: { remove_keyboard: true } }
+              );
+            } else {
+              saveDB();
+              await sendMessageToUser(chatId, `✅ ስልክ ቁጥርዎ (+${rawPhone}) ተመዝግቧል!`, {
+                reply_markup: { remove_keyboard: true }
+              });
+            }
+            continue;
+          }
+
+          if (!msg.text) continue;
 
           if (msg.text.startsWith('/setadmin')) {
             db.adminChatId = chatId;
             saveDB();
-            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: chatId,
-                text: `✅ እንኳን ደስ አለዎት! የእርስዎ ቴሌግራም (ID: ${chatId}) እንደ ዋና አድሚን ተመዝግቧል!\nከአሁን ጀምሮ ማንኛውም Deposit ስክሪንሾት እና የሜሴጅ ማረጋገጫ እዚህ ይደርስዎታል።`
-              })
-            });
+            await sendMessageToUser(chatId, `✅ እንኳን ደስ አለዎት! የእርስዎ ቴሌግራም (ID: ${chatId}) እንደ ዋና አድሚን ተመዝግቧል!`);
           }
 
           if (msg.text.startsWith('/setchannel')) {
@@ -466,14 +534,7 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             const targetChannel = parts[1] ? parts[1].trim() : chatId;
             db.channelId = targetChannel;
             saveDB();
-
-            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: chatId,
-                text: `✅ ቻናሉ (${targetChannel}) በትክክል ተገናኝቷል! ከአሁን ጀምሮ በየ 1 ሰዓቱ አሸናፊዎችን በራሱ ይለጥፋል።\nየመጀመሪያው የሙከራ ፖስት አሁን ተልኳል!`
-              })
-            });
+            await sendMessageToUser(chatId, `✅ ቻናሉ (${targetChannel}) በትክክል ተገናኝቷል! የመጀመሪያው የሙከራ ፖስት አሁን ተልኳል!`);
             await postWinnersToChannel();
           }
 
@@ -484,40 +545,77 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
           if (msg.text.startsWith('/start')) {
             const firstName = msg.from?.first_name || 'ተጫዋች';
 
-            // 👥 ሪፈራል መመዝገቢያ ሎጂክ
             if (!db.users[chatId]) {
               db.users[chatId] = {
-                balance: 10,
+                balance: 0,
+                phone: null,
+                bonusClaimed: false,
                 referralsCount: 0,
                 referralEarned: 0,
                 referredBy: null,
                 hasDeposited: false,
-                transactions: [{ type: "🎁 የእንኳን ደህና መጡ ነጻ ቦነስ", amount: 10, status: "Credited", time: "አሁን" }]
+                transactions: [{ type: "ℹ️ የ10 ብር ቦነስ ለማግኘት ስልክዎን ያጋሩ", amount: 0, status: "Info", time: "አሁን" }]
               };
             }
 
             const parts = msg.text.split(' ');
             if (parts[1] && parts[1].startsWith('ref_')) {
               const inviterId = parts[1].replace('ref_', '');
-              // ራሱን እንዳይጋብዝ እና ቀድሞ ዲፖዚት ያላደረገ አዲስ ሰው መሆኑን ማረጋገጥ
               if (inviterId !== chatId && db.users[inviterId] && !db.users[chatId].referredBy && !db.users[chatId].hasDeposited) {
                 db.users[chatId].referredBy = inviterId;
                 saveDB();
-                sendMessageToUser(inviterId, `👥 አንድ ሰው በእርስዎ ሊንክ ገብቷል!\nመጀመሪያ ዲፖዚት (Deposit) ሲያደርግና ሲጸድቅ የ 20 ብር ኮሚሽን ወደ ዋሌትዎ ይገባል! 🎁`);
+                sendMessageToUser(inviterId, `👥 አንድ ሰው በእርስዎ ሊንክ ገብቷል!\nመጀመሪያ ዲፖዚት (Deposit) ሲያደርግና ሲጸድቅ የ *20 ብር ኮሚሽን* ወደ ዋሌትዎ ይገባል! 🎁`);
               }
             }
+            saveDB();
 
+            const channelLink = (db.channelId && String(db.channelId).startsWith('@'))
+              ? `https://t.me/${String(db.channelId).replace('@', '')}`
+              : `https://t.me/${botUsername || 'DeresegnBot'}`;
+
+            // 1. ዋናው የጨዋታ እና የሜኑ ቁልፎች
             await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 chat_id: chatId,
-                text: `🌺 እንኳን ወደ *ደረሰኝ ፈጣን እጣ* በደህና መጡ ${firstName}!\n\n🎯 ከ10 ብር እስከ 300 ብር መደቦች በየደቂቃው ይወጣሉ!\n👇 ለመጫወት ከታች ያለውን ቁልፍ ይጫኑ፦`,
+                text: `🎉 *Welcome To Deresegn Eta, ${firstName}!* 🎉\n\n🌺 በየ 1 ደቂቃው በሚወጣው ፈጣን እጣ እስከ *3,000 ብር* ያሸንፉ!\n👇 Select an option below:`,
                 parse_mode: 'Markdown',
                 reply_markup: {
-                  inline_keyboard: [[{ text: "🎲 እጣ ግባ / Play Now", web_app: { url: PUBLIC_URL } }]]
+                  inline_keyboard: [
+                    [{ text: "🎮 Play Now", web_app: { url: PUBLIC_URL } }],
+                    [
+                      { text: "💳 Deposit", web_app: { url: `${PUBLIC_URL}?tab=wallet` } },
+                      { text: "🧾 Balance", callback_data: "check_balance" }
+                    ],
+                    [
+                      { text: "🎟 Invite", callback_data: "my_invite" },
+                      { text: "📢 Channel", url: channelLink }
+                    ]
+                  ]
                 }
               })
             });
+
+            // 2. ስልክ ቁጥሩን ገና ካላጋራ "Please Share Your Phone Number" መጠየቂያ
+            if (!db.users[chatId].phone) {
+              await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  text: `🎁 *Please Share Your Phone Number*\nየ 10 ብር ነጻ መጫወቻ ቦነስ ለማግኘት ከታች ያለውን ቁልፍ በመጫን ስልክ ቁጥርዎን ያጋሩ 👇`,
+                  parse_mode: 'Markdown',
+                  reply_markup: {
+                    keyboard: [
+                      [{ text: "📱 Share Your Phone Number / ስልክ ቁጥር አጋራ", request_contact: true }]
+                    ],
+                    resize_keyboard: true,
+                    one_time_keyboard: true
+                  }
+                })
+              });
+            }
           }
         }
       }
