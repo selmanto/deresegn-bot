@@ -32,11 +32,34 @@ let db = {
   winnersHistory: [
     { round: 41, room: "300 ብር", first: "Dawd (#4) - 3,000 ብር", second: "Mekdi (#11) - 600 ብር", third: "Kedir (#2) - 300 ብር" }
   ],
+  stats: {
+    totalDeposits: 0,
+    totalWithdrawals: 0,
+    totalBets: 0,
+    totalWins: 0,
+    daily: {}
+  },
   adminChatId: null,
   channelId: null,
   channelUrl: null,
   supportUrl: DEFAULT_SUPPORT_URL
 };
+
+function getTodayKey() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Addis_Ababa' });
+}
+
+function getTodayStats() {
+  if (!db.stats) {
+    db.stats = { totalDeposits: 0, totalWithdrawals: 0, totalBets: 0, totalWins: 0, daily: {} };
+  }
+  if (!db.stats.daily) db.stats.daily = {};
+  const today = getTodayKey();
+  if (!db.stats.daily[today]) {
+    db.stats.daily[today] = { deposits: 0, withdrawals: 0, bets: 0, wins: 0, newUsers: 0 };
+  }
+  return { today, d: db.stats.daily[today] };
+}
 
 const AppDataSchema = new mongoose.Schema({
   key: { type: String, default: 'main_db', unique: true },
@@ -55,6 +78,7 @@ if (MONGO_URI && MONGO_URI.startsWith('mongodb')) {
       const saved = await AppData.findOne({ key: 'main_db' });
       if (saved && saved.data) {
         db = { ...db, ...saved.data };
+        getTodayStats();
         console.log('📦 የተጫዋቾች ሂሳብ እና ዳታ ከ MongoDB ተጭኗል!');
         resolveChannelUrl();
       } else {
@@ -156,6 +180,9 @@ function drawRoomWinner(room) {
       db.users[slot.userId].transactions.unshift({
         type: `🏆 የእጣ ሽልማት (ዙር #${room.round})`, amount: prize, status: "Credited", time: "አሁን"
       });
+      const { d } = getTodayStats();
+      d.wins += prize;
+      db.stats.totalWins += prize;
       saveDB();
     }
   };
@@ -217,6 +244,10 @@ app.get('/api/state', (req, res) => {
       hasDeposited: false,
       transactions: [{ type: "ℹ️ የ10 ብር ነጻ ቦነስ ለማግኘት በቦቱ ላይ ስልክዎን ያጋሩ", amount: 0, status: "Info", time: "አሁን" }] 
     };
+    if (userId !== "1001") {
+      const { d } = getTodayStats();
+      d.newUsers += 1;
+    }
     saveDB();
   }
   res.json({ user: db.users[userId], rooms, winnersHistory: db.winnersHistory, botUsername });
@@ -237,6 +268,10 @@ app.post('/api/buy', (req, res) => {
   user.balance -= totalCost;
   available.forEach(num => { room.slots[num] = { name: playerName || "ተጫዋች", isBot: false, userId }; });
   user.transactions.unshift({ type: `🎟 ትኬት (${room.stake} ብር #${available.join(',')})`, amount: -totalCost, time: "አሁን" });
+
+  const { d } = getTodayStats();
+  d.bets += totalCost;
+  db.stats.totalBets += totalCost;
   saveDB();
 
   if (Object.keys(room.slots).length === room.totalSlots) drawRoomWinner(room);
@@ -347,6 +382,10 @@ function processDepositAction(id, action) {
       user.balance += dep.amount;
       user.transactions.unshift({ type: `✅ Deposit ጸድቋል`, amount: dep.amount, time: "አሁን" });
 
+      const { d } = getTodayStats();
+      d.deposits += dep.amount;
+      db.stats.totalDeposits += dep.amount;
+
       if (user.referredBy && !user.hasDeposited) {
         const inviterId = user.referredBy;
         if (db.users[inviterId]) {
@@ -381,6 +420,11 @@ function processWithdrawAction(id, action) {
   if (user) {
     if (action === 'approve') {
       user.transactions.unshift({ type: `✅ Withdraw ተከፍሏል (${w.accountInfo})`, amount: -w.amount, time: "አሁን" });
+
+      const { d } = getTodayStats();
+      d.withdrawals += w.amount;
+      db.stats.totalWithdrawals += w.amount;
+
       sendMessageToUser(w.userId, `💸 የጠየቁት የ ${w.amount} ብር ወጪ (Withdraw) ወደ ${w.accountInfo} ተልኳል! 🎉`);
     } else {
       user.balance += w.amount;
@@ -612,12 +656,14 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
           }
 
           if (msg.text.startsWith('/setadmin')) {
+            if (db.adminChatId && chatId !== String(db.adminChatId)) continue;
             db.adminChatId = chatId;
             saveDB();
             await sendMessageToUser(chatId, `✅ እንኳን ደስ አለዎት! የእርስዎ ቴሌግራም (ID: ${chatId}) እንደ ዋና አድሚን ተመዝግቧል!`);
           }
 
           if (msg.text.startsWith('/setchannel')) {
+            if (db.adminChatId && chatId !== String(db.adminChatId)) continue;
             const parts = msg.text.split(' ');
             const targetChannel = parts[1] ? parts[1].trim() : chatId;
             db.channelId = targetChannel;
@@ -628,7 +674,47 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
           }
 
           if (msg.text.startsWith('/postnow')) {
+            if (db.adminChatId && chatId !== String(db.adminChatId)) continue;
             await postWinnersToChannel();
+          }
+
+          // 📊 የዕለቱ እና ጠቅላላ የገቢ ሪፖርት (/stats — ለአድሚን ብቻ)
+          if (msg.text.startsWith('/stats')) {
+            if (!db.adminChatId || chatId !== String(db.adminChatId)) continue;
+            const { today, d } = getTodayStats();
+            const allUsers = Object.entries(db.users).filter(([id]) => id !== "1001");
+            const verifiedCount = allUsers.filter(([, u]) => u.phone).length;
+            const totalUserBalances = allUsers.reduce((sum, [, u]) => sum + (Number(u.balance) || 0), 0);
+            const pendingDepSum = db.pendingDeposits.reduce((sum, x) => sum + (Number(x.amount) || 0), 0);
+            const pendingWithSum = db.pendingWithdrawals.reduce((sum, x) => sum + (Number(x.amount) || 0), 0);
+
+            const todayNet = d.deposits - d.withdrawals;
+            const totalNet = db.stats.totalDeposits - db.stats.totalWithdrawals;
+
+            const report =
+              `📊 የደረሰኝ ፈጣን እጣ — የገቢ ሪፖርት\n` +
+              `📅 ቀን: ${today}\n` +
+              `━━━━━━━━━━━━━━━━━━\n` +
+              `📌 የዛሬ ሂሳብ (Today)\n` +
+              `📥 የጸደቀ Deposit: ${d.deposits.toLocaleString()} ብር\n` +
+              `📤 የተከፈለ Withdraw: ${d.withdrawals.toLocaleString()} ብር\n` +
+              `💰 የተጣራ የዛሬ ገቢ: ${todayNet.toLocaleString()} ብር\n` +
+              `🎟 የዛሬ ትኬት ሽያጭ: ${d.bets.toLocaleString()} ብር\n` +
+              `🏆 የዛሬ ሽልማት: ${d.wins.toLocaleString()} ብር\n` +
+              `👤 ዛሬ የገቡ አዲስ ሰዎች: ${d.newUsers}\n` +
+              `━━━━━━━━━━━━━━━━━━\n` +
+              `📈 ጠቅላላ ሂሳብ (All Time)\n` +
+              `📥 ጠቅላላ Deposit: ${db.stats.totalDeposits.toLocaleString()} ብር\n` +
+              `📤 ጠቅላላ Withdraw: ${db.stats.totalWithdrawals.toLocaleString()} ብር\n` +
+              `💵 ጠቅላላ የተጣራ ገቢ: ${totalNet.toLocaleString()} ብር\n` +
+              `━━━━━━━━━━━━━━━━━━\n` +
+              `👥 ተጫዋቾች: ${allUsers.length} (ስልክ ያረጋገጡ: ${verifiedCount})\n` +
+              `🏦 በተጫዋቾች ዋሌት ያለ: ${totalUserBalances.toLocaleString()} ብር\n` +
+              `⏳ Pending Deposit: ${db.pendingDeposits.length} (${pendingDepSum.toLocaleString()} ብር)\n` +
+              `⏳ Pending Withdraw: ${db.pendingWithdrawals.length} (${pendingWithSum.toLocaleString()} ብር)`;
+
+            await sendMessageToUser(chatId, report);
+            continue;
           }
 
           // 👥 የተመዘገቡ ተጫዋቾችን ዝርዝር ማሳያ (ለአድሚን ብቻ)
@@ -724,6 +810,8 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
                 hasDeposited: false,
                 transactions: [{ type: "ℹ️ የ10 ብር ቦነስ ለማግኘት ስልክዎን ያጋሩ", amount: 0, status: "Info", time: "አሁን" }]
               };
+              const { d } = getTodayStats();
+              d.newUsers += 1;
             } else {
               db.users[chatId].name = firstName;
               if (username) db.users[chatId].username = username;
