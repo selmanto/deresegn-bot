@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 
 const BOT_TOKEN = '9287818773:AAFMcBPcMlqRMjDx4YOv6OtabZBFi8TDTIs';
 const PUBLIC_URL = 'https://deresegn-bot-sips.onrender.com';
+const DEFAULT_SUPPORT_URL = 'https://t.me/Deresengsupport';
 const MONGO_URI = 'mongodb+srv://selmantoon_db_user:nb7Kam5fxPcwWWS8@cluster0.jdz7hsp.mongodb.net/deresegnbot?retryWrites=true&w=majority';
 
 const app = express();
@@ -33,7 +34,8 @@ let db = {
   ],
   adminChatId: null,
   channelId: null,
-  channelUrl: null
+  channelUrl: null,
+  supportUrl: DEFAULT_SUPPORT_URL
 };
 
 const AppDataSchema = new mongoose.Schema({
@@ -200,7 +202,6 @@ async function sendMessageToUser(chatId, text, extra = {}) {
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 let botUsername = '';
-const waitingForSupport = new Set();
 
 app.get('/api/state', (req, res) => {
   const userId = req.query.userId || "1001";
@@ -469,18 +470,6 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
               });
               continue;
             }
-            if (cbData === 'open_support') {
-              waitingForSupport.add(callerId);
-              await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ callback_query_id: cb.id })
-              });
-              await sendMessageToUser(
-                callerId,
-                `🆘 እርዳታ (Support)\n\nያለዎትን ጥያቄ ወይም ችግር አሁን እዚህ ጽፈው ይላኩ (ከ Deposit ወይም Withdraw ጋር የተያያዘ ከሆነ ዝርዝሩን ይጻፉ)። አድሚኑ በቅርቡ መልስ ይሰጥዎታል!`
-              );
-              continue;
-            }
 
             if (cbData === 'my_invite') {
               const u = db.users[callerId] || { referralsCount: 0, referralEarned: 0 };
@@ -607,47 +596,17 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
           }
 
           if (!msg.text) continue;
-          // 🆘 ተጫዋቹ የ Support ጥያቄውን ሲጽፍ ለአድሚን መላክ
-          if (waitingForSupport.has(chatId) && !msg.text.startsWith('/')) {
-            waitingForSupport.delete(chatId);
-            const u = db.users[chatId] || {};
-            if (db.adminChatId) {
-              await sendMessageToUser(
-                db.adminChatId,
-                `🆘 አዲስ የ Support ጥያቄ!\n\n👤 ስም: ${msg.from?.first_name || 'ተጫዋች'}\n📱 ስልክ: ${u.phone || 'አልተረጋገጠም'}\n🆔 ID: ${chatId}\n\n💬 መልዕክት:\n${msg.text}\n\n↩️ መልስ ለመስጠት እንዲህ ብለው ይላኩ:\n/reply ${chatId} መልስዎን_እዚህ_ይጻፉ`
-              );
-            }
-            await sendMessageToUser(chatId, `✅ መልዕክትዎ ለ Support ተልኳል! በቅርቡ እዚህ መልስ ያገኛሉ።`);
-            continue;
-          }
 
-          // ↩️ አድሚኑ ለተጫዋቹ መልስ መስጫ (/reply ID መልዕክት)
-          if (msg.text.startsWith('/reply')) {
-            if (!db.adminChatId || chatId !== String(db.adminChatId)) continue;
-            const parts = msg.text.split(' ');
-            const targetId = parts[1];
-            const replyMsg = parts.slice(2).join(' ').trim();
-            if (!targetId || !replyMsg) {
-              await sendMessageToUser(chatId, `⚠️ አጠቃቀም:\n/reply የተጫዋች_ID መልዕክትዎ`);
-              continue;
-            }
-            const ok = await sendMessageToUser(targetId, `📩 ከ Support የተላከ መልስ:\n\n${replyMsg}`);
-            await sendMessageToUser(chatId, ok ? `✅ መልስዎ ለ ID ${targetId} ተልኳል!` : `❌ መልዕክቱ አልተላከም።`);
-            continue;
-          }
-
-          // ⚙️ የ Support አካውንት ማገናኛ (/setsupport @Username ወይም /setsupport bot)
+          // ⚙️ የ Support አካውንት መቀየሪያ (/setsupport @Username)
           if (msg.text.startsWith('/setsupport')) {
             if (!db.adminChatId || chatId !== String(db.adminChatId)) continue;
             const arg = (msg.text.split(' ')[1] || '').trim();
-            if (!arg || arg.toLowerCase() === 'bot') {
-              db.supportUrl = null;
-              saveDB();
-              await sendMessageToUser(chatId, `✅ Support በቦቱ ውስጥ በሚስጥር እንዲሰራ (In-Bot Support) ተቀይሯል!`);
+            if (!arg) {
+              await sendMessageToUser(chatId, `ℹ️ አሁን ያለው Support ሊንክ: ${db.supportUrl || DEFAULT_SUPPORT_URL}\n\nለመቀየር:\n/setsupport @አዲስ_Username`);
             } else {
               db.supportUrl = arg.startsWith('http') ? arg : `https://t.me/${arg.replace('@', '')}`;
               saveDB();
-              await sendMessageToUser(chatId, `✅ የ Support ቁልፍ ወደ ${db.supportUrl} ተገናኝቷል!`);
+              await sendMessageToUser(chatId, `✅ የ Support ቁልፍ ወደ ${db.supportUrl} ተቀይሯል!`);
             }
             continue;
           }
@@ -789,9 +748,10 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
               ? { text: "📢 Channel", url: db.channelUrl }
               : { text: "📢 Channel", callback_data: "no_channel" };
 
-            const supportButton = db.supportUrl
-              ? { text: "🆘 Support", url: db.supportUrl }
-              : { text: "🆘 Support", callback_data: "open_support" };
+            const supportButton = {
+              text: "🆘 Support",
+              url: db.supportUrl || DEFAULT_SUPPORT_URL
+            };
 
             await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
               method: 'POST',
