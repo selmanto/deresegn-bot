@@ -536,16 +536,19 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
           if (!msg) continue;
           const chatId = String(msg.chat.id);
 
-          // 📱 ተጫዋቹ ስልክ ቁጥሩን ሲያጋራ (Share Phone Number)
+        // 📱 ተጫዋቹ ስልክ ቁጥሩን ሲያጋራ (Share Phone Number)
           if (msg.contact) {
             if (String(msg.contact.user_id) !== String(msg.from?.id)) {
               await sendMessageToUser(chatId, `⚠️ እባክዎ የራስዎን ትክክለኛ የቴሌግራም ስልክ ቁጥር ብቻ ያጋሩ!`);
               continue;
             }
 
-            const rawPhone = msg.contact.phone_number.replace(/\+/g, '');
+            const rawPhone = msg.contact.phone_number.replace(/[^0-9]/g, '');
+            const playerName = msg.from?.first_name || 'ተጫዋች';
+            const playerUsername = msg.from?.username ? `@${msg.from.username}` : 'የለውም';
+
             if (!db.users[chatId]) {
-              db.users[chatId] = { balance: 0, phone: null, bonusClaimed: false, referralsCount: 0, referralEarned: 0, referredBy: null, hasDeposited: false, transactions: [] };
+              db.users[chatId] = { name: playerName, balance: 0, phone: null, bonusClaimed: false, referralsCount: 0, referralEarned: 0, referredBy: null, hasDeposited: false, transactions: [] };
             }
 
             if (!rawPhone.startsWith('251')) {
@@ -556,6 +559,8 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             }
 
             db.users[chatId].phone = '+' + rawPhone;
+            db.users[chatId].name = playerName;
+
             if (!db.users[chatId].bonusClaimed) {
               db.users[chatId].bonusClaimed = true;
               db.users[chatId].balance += 10;
@@ -574,6 +579,14 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
               await sendMessageToUser(chatId, `✅ ስልክ ቁጥርዎ (+${rawPhone}) ተመዝግቧል!`, {
                 reply_markup: { remove_keyboard: true }
               });
+            }
+
+            // 🔔 ለአድሚን ወዲያውኑ ስልክ ቁጥሩን መላክ
+            if (db.adminChatId) {
+              await sendMessageToUser(
+                db.adminChatId,
+                `📱 አዲስ ተጫዋች ስልክ ቁጥሩን አጋርቷል!\n\n👤 ስም: ${playerName}\n🔗 Username: ${playerUsername}\n🆔 ID: ${chatId}\n📞 ስልክ: +${rawPhone}\n💰 ሂሳብ: ${db.users[chatId].balance} ብር`
+              );
             }
             continue;
           }
@@ -598,6 +611,22 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
 
           if (msg.text.startsWith('/postnow')) {
             await postWinnersToChannel();
+          }
+
+          if (msg.text.startsWith('/users')) {
+            if (!db.adminChatId || chatId !== String(db.adminChatId)) continue;
+            const entries = Object.entries(db.users).filter(([id]) => id !== "1001");
+            if (entries.length === 0) {
+              await sendMessageToUser(chatId, `📋 እስካሁን የተመዘገበ ተጫዋች የለም።`);
+            } else {
+              const list = entries.slice(-30).map(([id, u], idx) =>
+                `${idx + 1}. ${u.name || 'ተጫዋች'} | 📱 ${u.phone || 'አልተረጋገጠም'} | 💰 ${u.balance} ብር`
+              ).join('\n');
+              await sendMessageToUser(
+                chatId,
+                `👥 ጠቅላላ ተጫዋቾች: ${entries.length}\n(የመጨረሻዎቹ 30)፦\n\n${list}`
+              );
+            }
           }
 
           if (msg.text.startsWith('/start')) {
