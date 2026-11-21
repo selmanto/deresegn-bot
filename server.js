@@ -886,6 +886,39 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             continue;
           }
 
+                    // 🖼️ ፎቶ ከነ ጽሑፉ ለሁሉም ተጫዋቾች መላኪያ (/broadcast በፎቶ Caption ላይ)
+          if (msg.photo && msg.caption && msg.caption.startsWith('/broadcast')) {
+            if (!db.adminChatId || chatId !== String(db.adminChatId)) continue;
+            const photoId = msg.photo[msg.photo.length - 1].file_id;
+            const broadcastCaption = msg.caption.replace(/^\/broadcast\s*/i, '').trim();
+            const allUserIds = Object.keys(db.users).filter(id => id !== "1001");
+
+            await sendMessageToUser(chatId, `⏳ ፎቶውን ለ ${allUserIds.length} ተጫዋቾች በመላክ ላይ...`);
+            let sent = 0, failed = 0;
+            for (const uid of allUserIds) {
+              try {
+                const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    chat_id: uid,
+                    photo: photoId,
+                    caption: broadcastCaption,
+                    reply_markup: {
+                      inline_keyboard: [[{ text: "🎮 Play Now / ይጫወቱ", web_app: { url: PUBLIC_URL } }]]
+                    }
+                  })
+                });
+                const d = await r.json();
+                if (d.ok) sent++; else failed++;
+              } catch (e) { failed++; }
+              await delay(80);
+            }
+            await sendMessageToUser(chatId, `📢 የፎቶ Broadcast ተጠናቋል!\n✅ የተላከላቸው: ${sent}\n❌ ያልደረሳቸው: ${failed}`);
+            continue;
+          }
+
+
           if (!msg.text) continue;
 
           if (msg.text.startsWith('/setsupport')) {
