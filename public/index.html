@@ -168,6 +168,10 @@
             transform: scale(0.98);
         }
 
+        .game-card.card-crash {
+            background: linear-gradient(135deg, #0c4a6e 0%, #0284c7 55%, #082f49 100%);
+        }
+
         .game-card.card-mines {
             background: linear-gradient(135deg, #312e81 0%, #4f46e5 55%, #1e1b4b 100%);
         }
@@ -223,7 +227,7 @@
 
         .game-card p {
             font-size: 11px;
-            color: rgba(255, 255, 255, 0.84);
+            color: rgba(255, 255, 255, 0.86);
             line-height: 1.4;
         }
 
@@ -267,6 +271,192 @@
             font-size: 12px;
             font-weight: 700;
             cursor: pointer;
+        }
+
+        /* ==================== LADA CRASH GAME STYLES ==================== */
+        .crash-history {
+            display: flex;
+            gap: 5px;
+            overflow-x: auto;
+            margin-bottom: 10px;
+            padding-bottom: 2px;
+            align-items: center;
+        }
+
+        .crash-pill {
+            font-size: 11px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+
+        .crash-pill.low {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.45);
+        }
+
+        .crash-pill.mid {
+            background: rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.45);
+        }
+
+        .crash-pill.high {
+            background: rgba(245, 158, 11, 0.25);
+            color: #fde047;
+            border: 1px solid rgba(245, 158, 11, 0.6);
+        }
+
+        .crash-stage {
+            position: relative;
+            height: 225px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 2px solid #0284c7;
+            background: radial-gradient(circle at 50% 25%, #0c4a6e 0%, #0f172a 65%, #020617 100%);
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .crash-stage.crashed-bg {
+            border-color: #ef4444;
+            background: radial-gradient(circle at 50% 30%, #7f1d1d 0%, #1e1014 68%, #090609 100%);
+        }
+
+        .crash-round-badge {
+            position: absolute;
+            top: 10px;
+            left: 12px;
+            font-size: 11px;
+            color: #bae6fd;
+            background: rgba(0, 0, 0, 0.45);
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-weight: 700;
+            z-index: 5;
+        }
+
+        .crash-mult-center {
+            position: relative;
+            z-index: 5;
+            text-align: center;
+            margin-bottom: 42px;
+        }
+
+        .crash-mult-num {
+            font-size: 46px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            color: #fff;
+            text-shadow: 0 4px 20px rgba(56, 189, 248, 0.65);
+            line-height: 1.05;
+        }
+
+        .crash-mult-num.driving-hot {
+            color: #fde047;
+            text-shadow: 0 4px 24px rgba(245, 158, 11, 0.75);
+        }
+
+        .crash-mult-num.crashed-num {
+            color: #f87171;
+            text-shadow: 0 4px 24px rgba(239, 68, 68, 0.8);
+        }
+
+        .crash-sub-text {
+            font-size: 12px;
+            font-weight: 700;
+            color: #bae6fd;
+            margin-top: 4px;
+        }
+
+        .crash-road {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 54px;
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            border-top: 3px solid #38bdf8;
+            z-index: 2;
+        }
+
+        .road-dashes {
+            position: absolute;
+            top: 24px;
+            left: 0;
+            width: 200%;
+            height: 4px;
+            background: repeating-linear-gradient(
+                90deg,
+                #fde047 0px,
+                #fde047 26px,
+                transparent 26px,
+                transparent 52px
+            );
+            opacity: 0.85;
+        }
+
+        .crash-stage.is-driving .road-dashes {
+            animation: roadMove 0.45s linear infinite;
+        }
+
+        @keyframes roadMove {
+            from { transform: translateX(0); }
+            to { transform: translateX(-52px); }
+        }
+
+        .lada-wrap {
+            position: absolute;
+            bottom: 24px;
+            left: 10%;
+            z-index: 6;
+            transition: left 0.15s linear;
+            display: flex;
+            align-items: center;
+        }
+
+        .crash-stage.is-driving .lada-svg {
+            animation: ladaBounce 0.22s infinite alternate;
+        }
+
+        @keyframes ladaBounce {
+            from { transform: translateY(0px) rotate(-1.5deg); }
+            to { transform: translateY(-2.5px) rotate(1deg); }
+        }
+
+        .lada-boom {
+            display: none;
+            font-size: 30px;
+            position: absolute;
+            top: -18px;
+            right: -10px;
+            animation: popIn 0.2s ease;
+        }
+
+        .crash-stage.crashed-bg .lada-boom {
+            display: block;
+        }
+
+        .crash-stage.crashed-bg .lada-svg {
+            filter: grayscale(0.4) brightness(0.75);
+            transform: rotate(-6deg);
+        }
+
+        .crash-bet-status {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            font-size: 12px;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
         }
 
         /* ==================== MINES GAME STYLES ==================== */
@@ -935,7 +1125,7 @@
         </div>
     </div>
 
-    <!-- TAB 1: ጨዋታዎች (LOBBY + 4 GAMES) -->
+    <!-- TAB 1: ጨዋታዎች (LOBBY + 5 GAMES) -->
     <div id="tab-play" class="tab-content active">
 
         <!-- SUB-VIEW A: GAME LOBBY -->
@@ -948,17 +1138,33 @@
             <div class="lobby-hero">
                 <div>
                     <h2>🎮 መጫወት የሚፈልጉትን ጌም ይምረጡ</h2>
-                    <p>በአንድ ዋሌት 4 ፈጣን ጨዋታዎችን ይጫወቱ — ፈጣን ቴሌብር ወጪ!</p>
+                    <p>በአንድ ዋሌት 5 ፈጣን ጨዋታዎች — ፈጣን ቴሌብር ገቢ እና ወጪ!</p>
                 </div>
             </div>
 
-            <div class="lobby-title">⚡ ፈጣን ጨዋታዎች (4 GAMES)</div>
+            <div class="lobby-title">⚡ ፈጣን ጨዋታዎች (5 GAMES)</div>
 
-            <!-- Card 1: Mines (Instant Play) -->
+            <!-- Card 1: Lada Crash -->
+            <div class="game-card card-crash" onclick="openGame('crash')">
+                <div class="game-card-left">
+                    <div class="game-badge-row">
+                        <span class="hot-badge" style="background:#ef4444;">NEW • HOT</span>
+                        <span class="live-badge" id="lobby-crash-timer">🚕 ቀጥታ</span>
+                    </div>
+                    <h3>🚕 Lada Crash (ላዳ ታክሲ)</h3>
+                    <p>ላዳው ሳይቆም <b>Cash Out</b> ነክተው እስከ <b>x15.0</b> ያሸንፉ!<br>⚡ ከ10 - 50 ብር • በየ8 ሰከንዱ ጉዞ</p>
+                </div>
+                <div class="game-card-right">
+                    <span class="game-big-icon">🚕</span>
+                    <span class="play-pill">ተጫወት ▶</span>
+                </div>
+            </div>
+
+            <!-- Card 2: Mines (Instant Play) -->
             <div class="game-card card-mines" onclick="openGame('mines')">
                 <div class="game-card-left">
                     <div class="game-badge-row">
-                        <span class="hot-badge" style="background:#a855f7;">NEW • INSTANT</span>
+                        <span class="hot-badge" style="background:#a855f7;">INSTANT</span>
                         <span class="live-badge">⚡ ያለ መጠበቅ</span>
                     </div>
                     <h3>💣 Mines (ቦምብ ማለፍ)</h3>
@@ -970,7 +1176,7 @@
                 </div>
             </div>
 
-            <!-- Card 2: Horse Racing -->
+            <!-- Card 3: Horse Racing -->
             <div class="game-card card-horse" onclick="openGame('horse')">
                 <div class="game-card-left">
                     <div class="game-badge-row">
@@ -986,7 +1192,7 @@
                 </div>
             </div>
 
-            <!-- Card 3: Dog Racing -->
+            <!-- Card 4: Dog Racing -->
             <div class="game-card card-dog" onclick="openGame('dog')">
                 <div class="game-card-left">
                     <div class="game-badge-row">
@@ -1002,7 +1208,7 @@
                 </div>
             </div>
 
-            <!-- Card 4: Deresegn Eta -->
+            <!-- Card 5: Deresegn Eta -->
             <div class="game-card card-eta" onclick="openGame('eta')">
                 <div class="game-card-left">
                     <div class="game-badge-row">
@@ -1015,6 +1221,81 @@
                 <div class="game-card-right">
                     <span class="game-big-icon">🎲</span>
                     <span class="play-pill">ተጫወት ▶</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUB-VIEW E: LADA CRASH GAME -->
+        <div id="view-crash" class="game-view">
+            <div class="game-top-bar">
+                <button class="back-btn" onclick="openLobby()">⬅ ወደ ጨዋታዎች</button>
+                <span style="font-size:13px; font-weight:800; color:#38bdf8;">🚕 Lada Crash</span>
+            </div>
+
+            <!-- Recent Multipliers -->
+            <div class="crash-history" id="crash-history"></div>
+
+            <!-- Live Stage -->
+            <div class="crash-stage" id="crash-stage">
+                <div class="crash-round-badge" id="crash-round-badge">ዙር #501</div>
+
+                <div class="crash-mult-center">
+                    <div class="crash-mult-num" id="crash-mult-display">x1.00</div>
+                    <div class="crash-sub-text" id="crash-sub-text">ቀጣዩ ጉዞ በመጀመር ላይ...</div>
+                </div>
+
+                <!-- Blue-and-White Ethiopian Lada Taxi SVG -->
+                <div class="lada-wrap" id="lada-wrap">
+                    <span class="lada-boom">💥</span>
+                    <svg class="lada-svg" width="84" height="40" viewBox="0 0 84 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Taxi Sign -->
+                        <rect x="33" y="2" width="14" height="5" rx="2" fill="#fde047" stroke="#0f172a" stroke-width="1"/>
+                        <!-- White Roof (Addis Taxi Style) -->
+                        <path d="M18 17 L26 7 L54 7 L64 17 Z" fill="#f8fafc" stroke="#0f172a" stroke-width="1.5"/>
+                        <!-- Windows -->
+                        <path d="M23 16 L28 9 L40 9 L40 16 Z" fill="#38bdf8"/>
+                        <path d="M43 16 L43 9 L53 9 L59 16 Z" fill="#38bdf8"/>
+                        <!-- Blue Body -->
+                        <rect x="6" y="16" width="70" height="15" rx="4" fill="#0284c7" stroke="#0f172a" stroke-width="1.5"/>
+                        <!-- White Stripe -->
+                        <rect x="7" y="22" width="68" height="3" fill="#e0f2fe"/>
+                        <!-- Headlight & Tail light -->
+                        <rect x="73" y="18" width="4" height="5" rx="1" fill="#fef08a"/>
+                        <rect x="5" y="18" width="3" height="5" rx="1" fill="#ef4444"/>
+                        <!-- Wheels -->
+                        <circle cx="22" cy="31" r="6.5" fill="#0f172a" stroke="#94a3b8" stroke-width="1.5"/>
+                        <circle cx="22" cy="31" r="2.5" fill="#e2e8f0"/>
+                        <circle cx="62" cy="31" r="6.5" fill="#0f172a" stroke="#94a3b8" stroke-width="1.5"/>
+                        <circle cx="62" cy="31" r="2.5" fill="#e2e8f0"/>
+                    </svg>
+                </div>
+
+                <div class="crash-road">
+                    <div class="road-dashes"></div>
+                </div>
+            </div>
+
+            <!-- Win Notification Banner -->
+            <div class="mines-banner" id="crash-win-banner"></div>
+
+            <!-- Current Round Bet Info -->
+            <div class="crash-bet-status" id="crash-my-bet-info"></div>
+
+            <!-- Controls -->
+            <div class="mines-controls">
+                <div style="font-size:11px; color:var(--muted); margin-bottom:5px;">የመደብ ብር ይምረጡ (ከ10 - 50 ብር)፦</div>
+                <div class="stake-row" id="crash-stake-row">
+                    <div class="stake-btn active" onclick="selectCrashStake(10, this)">10 ብር</div>
+                    <div class="stake-btn" onclick="selectCrashStake(20, this)">20 ብር</div>
+                    <div class="stake-btn" onclick="selectCrashStake(30, this)">30 ብር</div>
+                    <div class="stake-btn" onclick="selectCrashStake(50, this)">50 ብር</div>
+                </div>
+
+                <button class="btn-main" id="crash-action-btn" onclick="handleCrashAction()">
+                    🚕 መድብ (10 ብር)
+                </button>
+                <div style="text-align:center; font-size:11px; color:var(--muted);">
+                    💡 ላዳው ሲነሳ ኦዱ ይጨምራል፤ ሳይቆም በፊት <b>Cash Out</b> ነክተው ሽልማትዎን ይውሰዱ!
                 </div>
             </div>
         </div>
@@ -1043,10 +1324,8 @@
 
             <div class="mines-banner" id="mines-banner"></div>
 
-            <!-- 5x5 Mines Grid -->
             <div class="mines-grid" id="mines-grid"></div>
 
-            <!-- Action Controls -->
             <div class="mines-controls">
                 <div id="mines-play-controls" style="display:none;">
                     <button class="btn-cashout" id="mines-cashout-btn" onclick="cashoutMinesGame()">
@@ -1146,28 +1425,23 @@
 
             <div class="winner-alert" id="race-winner-banner"></div>
 
-            <!-- 6-Lane Live Track -->
             <div class="track-container track-horse" id="race-track">
                 <div class="finish-line"></div>
                 <div id="race-lanes"></div>
             </div>
 
-            <!-- Recent Winners -->
             <div class="race-history-bar" id="race-history"></div>
 
-            <!-- Current Round User Bets -->
             <div class="my-bets-box" id="race-my-bets"></div>
 
-            <!-- Stake Selector -->
             <div style="font-size:11px; color:var(--muted); margin-bottom:5px;">1. የመደብ ብር ይምረጡ (ከፍተኛ 50 ብር በዙር)፦</div>
-            <div class="stake-row">
+            <div class="stake-row" id="race-stake-row">
                 <div class="stake-btn active" onclick="selectRaceStake(10, this)">10 ብር</div>
                 <div class="stake-btn" onclick="selectRaceStake(20, this)">20 ብር</div>
                 <div class="stake-btn" onclick="selectRaceStake(30, this)">30 ብር</div>
                 <div class="stake-btn" onclick="selectRaceStake(50, this)">50 ብር</div>
             </div>
 
-            <!-- 6 Runners Grid -->
             <div style="font-size:11px; color:var(--muted); margin-bottom:5px;">2. አሸናፊ ይሆናል የሚሉትን ይምረጡ፦</div>
             <div class="runners-grid" id="race-runners-grid"></div>
 
@@ -1183,7 +1457,6 @@
             <h2 id="wallet-big-balance" style="font-size: 28px; color: var(--gold); margin: 6px 0;">0 ብር</h2>
         </div>
 
-        <!-- Deposit Form -->
         <div class="info-card">
             <h3 style="font-size: 14px; margin-bottom: 6px; color: var(--accent);">📥 ብር ወደ ዋሌት ማስገቢያ (Deposit)</h3>
             <div style="font-size: 12px; color: #cbd5e1; background: #0b1120; padding: 10px; border-radius: 8px; margin-bottom: 8px; line-height: 1.9;">
@@ -1204,7 +1477,6 @@
             <button class="btn-main" id="dep-btn" onclick="handleDeposit()">✅ ደረሰኝ ላክና ወደ ዋሌት አስገባ</button>
         </div>
 
-        <!-- Withdraw Form -->
         <div class="info-card">
             <h3 style="font-size: 14px; margin-bottom: 6px; color: var(--gold);">📤 ብር ወጪ መጠየቂያ (Withdraw)</h3>
             <input type="number" id="with-amount" class="input-field" placeholder="ወጪ የሚሆን የብር መጠን (ዝቅተኛ 50 ብር)">
@@ -1212,7 +1484,6 @@
             <button class="btn-main" style="background: var(--gold); color: #000;" onclick="handleWithdraw()">💸 ወጪ አድርግ (Withdraw)</button>
         </div>
 
-        <!-- Transaction History -->
         <div class="info-card">
             <h3 style="font-size: 13px; margin-bottom: 8px;">📜 የሂሳብ እንቅስቃሴ (Transactions)</h3>
             <div id="tx-list"></div>
@@ -1263,7 +1534,7 @@
         const userId = String(tg.initDataUnsafe?.user?.id || "1001");
         document.getElementById('playerName').value = tg.initDataUnsafe?.user?.first_name || "ተጫዋች";
 
-        let activeView = 'lobby'; // 'lobby', 'eta', 'race', 'mines'
+        let activeView = 'lobby'; // 'lobby', 'crash', 'mines', 'eta', 'race'
         let currentRoomId = "300";
         let currentRaceType = "horse";
         let selectedSlots = [];
@@ -1275,6 +1546,14 @@
         let minesCount = 5;
         let minesState = null;
         let minesBusy = false;
+
+        // Lada Crash State
+        const CRASH_GROWTH_RATE = 0.085;
+        let crashStake = 10;
+        let crashState = null;
+        let lastCrashSync = Date.now();
+        let crashBusy = false;
+        let lastCrashWinMsg = '';
 
         let appState = null;
         let lastSyncTime = Date.now();
@@ -1300,6 +1579,11 @@
             } else if (game === 'mines') {
                 setGameView('mines');
                 renderMinesView();
+            } else if (game === 'crash') {
+                lastCrashWinMsg = '';
+                setGameView('crash');
+                fetchCrashState();
+                renderCrashStatic();
             } else {
                 currentRaceType = game;
                 selectedRunnerId = null;
@@ -1319,7 +1603,7 @@
 
         function selectRaceStake(amount, el) {
             selectedRaceStake = amount;
-            el.parentElement.querySelectorAll('.stake-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#race-stake-row .stake-btn').forEach(b => b.classList.remove('active'));
             el.classList.add('active');
             renderRacePanel();
         }
@@ -1328,6 +1612,203 @@
             selectedRunnerId = selectedRunnerId === id ? null : id;
             renderRacePanel();
         }
+
+        // ==================== LADA CRASH FUNCTIONS ====================
+        function selectCrashStake(amount, el) {
+            crashStake = amount;
+            document.querySelectorAll('#crash-stake-row .stake-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            renderCrashFrame();
+        }
+
+        async function fetchCrashState() {
+            try {
+                const res = await fetch(`/api/crash/state?userId=${userId}`);
+                const data = await res.json();
+                if (data.crash) {
+                    if (crashState && crashState.round !== data.crash.round) {
+                        lastCrashWinMsg = '';
+                    }
+                    crashState = data.crash;
+                    lastCrashSync = Date.now();
+                    updateBalanceDisplay(data.balance);
+                    renderCrashStatic();
+                    renderCrashFrame();
+                }
+            } catch (e) {}
+        }
+
+        function renderCrashStatic() {
+            if (!crashState) return;
+            document.getElementById('crash-round-badge').innerText = `ዙር #${crashState.round}`;
+
+            const histEl = document.getElementById('crash-history');
+            histEl.innerHTML = `<span style="font-size:10px; color:var(--muted); white-space:nowrap;">የቅርብ ዙሮች:</span>` +
+                crashState.history.map(h => {
+                    const cls = h.crashPoint < 1.5 ? 'low' : (h.crashPoint < 3 ? 'mid' : 'high');
+                    return `<span class="crash-pill ${cls}">x${h.crashPoint.toFixed(2)}</span>`;
+                }).join('');
+
+            const winBanner = document.getElementById('crash-win-banner');
+            if (lastCrashWinMsg) {
+                winBanner.className = 'mines-banner win';
+                winBanner.innerText = lastCrashWinMsg;
+            } else if (crashState.myBet && crashState.myBet.cashedOut) {
+                winBanner.className = 'mines-banner win';
+                winBanner.innerText = `🎉 እንኳን ደስ አለዎት! +${crashState.myBet.payout} ብር (x${crashState.myBet.cashoutMult.toFixed(2)}) ወደ ዋሌትዎ ገብቷል!`;
+            } else if (crashState.status === 'crashed' && crashState.myBet && !crashState.myBet.cashedOut) {
+                winBanner.className = 'mines-banner lose';
+                winBanner.innerText = `💥 ላዳው x${crashState.crashPoint.toFixed(2)} ላይ ቆመ! ቀጣዩን ዙር ይሞክሩ።`;
+            } else {
+                winBanner.className = 'mines-banner';
+                winBanner.innerText = '';
+            }
+
+            const betInfo = document.getElementById('crash-my-bet-info');
+            if (crashState.myBet) {
+                betInfo.style.display = 'flex';
+                if (crashState.myBet.cashedOut) {
+                    betInfo.innerHTML = `<span>🎟 የመደቡት: <b>${crashState.myBet.amount} ብር</b></span><strong style="color:#34d399;">✅ +${crashState.myBet.payout} ብር (x${crashState.myBet.cashoutMult.toFixed(2)})</strong>`;
+                } else {
+                    betInfo.innerHTML = `<span>🎟 የመደቡት: <b>${crashState.myBet.amount} ብር</b></span><strong style="color:var(--gold);">🚕 በጉዞ ላይ</strong>`;
+                }
+            } else {
+                betInfo.style.display = 'none';
+            }
+        }
+
+        function renderCrashFrame() {
+            if (activeView !== 'crash' || !crashState) return;
+
+            const stage = document.getElementById('crash-stage');
+            const multEl = document.getElementById('crash-mult-display');
+            const subEl = document.getElementById('crash-sub-text');
+            const ladaWrap = document.getElementById('lada-wrap');
+            const btn = document.getElementById('crash-action-btn');
+
+            const delta = Date.now() - lastCrashSync;
+
+            if (crashState.status === 'waiting') {
+                const remSec = Math.max(0, (crashState.timeLeftMs - delta) / 1000);
+                stage.className = 'crash-stage';
+                multEl.className = 'crash-mult-num';
+                multEl.innerText = `${remSec.toFixed(1)}s`;
+                subEl.innerText = '🚕 ቀጣዩ የላዳ ጉዞ እስኪጀምር ይመድቡ!';
+                ladaWrap.style.left = '8%';
+
+                if (crashState.myBet) {
+                    btn.className = 'btn-main';
+                    btn.disabled = true;
+                    btn.innerText = `✅ ${crashState.myBet.amount} ብር ተመድቧል — ጉዞ እየተጠበቀ ነው...`;
+                } else {
+                    btn.className = 'btn-main';
+                    btn.disabled = crashBusy;
+                    btn.innerText = `🚕 አሁኑኑ መድብ (${crashStake} ብር)`;
+                }
+            } else if (crashState.status === 'driving') {
+                const elapsedSec = Math.max(0, crashState.elapsedMs + delta) / 1000;
+                const liveMult = Math.min(15.00, Math.floor(Math.pow(Math.E, CRASH_GROWTH_RATE * elapsedSec) * 100) / 100);
+
+                stage.className = 'crash-stage is-driving';
+                multEl.className = liveMult >= 2.0 ? 'crash-mult-num driving-hot' : 'crash-mult-num';
+                multEl.innerText = `x${liveMult.toFixed(2)}`;
+                subEl.innerText = '🔥 ላዳው እየከነፈ ነው — ሳይቆም Cash Out ይንኩ!';
+
+                const ladaLeft = Math.min(62, 10 + elapsedSec * 2.6);
+                ladaWrap.style.left = `${ladaLeft}%`;
+
+                if (crashState.myBet && !crashState.myBet.cashedOut) {
+                    const livePayout = Math.min(crashState.maxPayout || 600, Math.round(crashState.myBet.amount * liveMult));
+                    btn.className = 'btn-cashout';
+                    btn.disabled = crashBusy;
+                    btn.innerText = `💰 CASH OUT — ${livePayout} ብር ውሰድ (x${liveMult.toFixed(2)})`;
+                } else if (crashState.myBet && crashState.myBet.cashedOut) {
+                    btn.className = 'btn-main';
+                    btn.disabled = true;
+                    btn.innerText = `🎉 +${crashState.myBet.payout} ብር ወስደዋል! ቀጣዩን ዙር ይጠብቁ`;
+                } else {
+                    btn.className = 'btn-main';
+                    btn.disabled = true;
+                    btn.innerText = `🚕 ላዳው በጉዞ ላይ ነው... ቀጣዩን ዙር ይጠብቁ`;
+                }
+            } else if (crashState.status === 'crashed') {
+                stage.className = 'crash-stage crashed-bg';
+                multEl.className = 'crash-mult-num crashed-num';
+                multEl.innerText = `x${(crashState.crashPoint || 1).toFixed(2)}`;
+                subEl.innerText = '💥 ላዳው ቆመ! ቀጣዩ ዙር በሰከንዶች ይጀምራል';
+
+                btn.className = 'btn-main';
+                btn.disabled = true;
+                btn.innerText = '⏳ ቀጣዩ ዙር እየተዘጋጀ ነው...';
+            }
+        }
+
+        async function handleCrashAction() {
+            if (crashBusy || !crashState) return;
+
+            if (crashState.status === 'waiting' && !crashState.myBet) {
+                crashBusy = true;
+                renderCrashFrame();
+                try {
+                    const res = await fetch('/api/crash/bet', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId, amount: crashStake })
+                    });
+                    const data = await res.json();
+                    if (data.error) {
+                        alert(data.error);
+                    } else {
+                        crashState = data.crash;
+                        lastCrashSync = Date.now();
+                        updateBalanceDisplay(data.balance);
+                        renderCrashStatic();
+                    }
+                } catch (e) {
+                    alert('የኢንተርኔት ችግር አጋጥሟል፤ እባክዎ ደግመው ይሞክሩ።');
+                } finally {
+                    crashBusy = false;
+                    renderCrashFrame();
+                }
+            } else if (crashState.status === 'driving' && crashState.myBet && !crashState.myBet.cashedOut) {
+                crashBusy = true;
+                renderCrashFrame();
+                try {
+                    const res = await fetch('/api/crash/cashout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId })
+                    });
+                    const data = await res.json();
+                    if (data.error) {
+                        alert(data.error);
+                        fetchCrashState();
+                    } else {
+                        crashState = data.crash;
+                        lastCrashSync = Date.now();
+                        lastCrashWinMsg = `🎉 እንኳን ደስ አለዎት! +${data.payout} ብር (x${data.mult.toFixed(2)}) ወደ ዋሌትዎ ገብቷል!`;
+                        updateBalanceDisplay(data.balance);
+                        renderCrashStatic();
+                        fetchState();
+                    }
+                } catch (e) {
+                    alert('የኢንተርኔት ችግር አጋጥሟል፤ እባክዎ ደግመው ይሞክሩ።');
+                } finally {
+                    crashBusy = false;
+                    renderCrashFrame();
+                }
+            }
+        }
+
+        // Fast sync only when watching Lada Crash
+        setInterval(() => {
+            if (activeView === 'crash' && document.getElementById('tab-play').classList.contains('active')) {
+                fetchCrashState();
+            }
+        }, 700);
+
+        // Smooth 60ms animation for Lada Crash
+        setInterval(renderCrashFrame, 60);
 
         // ==================== MINES FUNCTIONS ====================
         function previewFirstMultiplier(count) {
@@ -1360,7 +1841,6 @@
             const isPlaying = minesState && minesState.status === 'playing';
             const isFinished = minesState && (minesState.status === 'won' || minesState.status === 'lost');
 
-            // Top stats
             if (isPlaying) {
                 document.getElementById('mines-curr-mult').innerText = `x${minesState.multiplier.toFixed(2)}`;
                 document.getElementById('mines-next-mult').innerText = `x${minesState.nextMultiplier.toFixed(2)}`;
@@ -1375,7 +1855,6 @@
                 document.getElementById('mines-curr-payout').innerText = '0 ብር';
             }
 
-            // Banner
             const banner = document.getElementById('mines-banner');
             if (minesState && minesState.status === 'won') {
                 banner.className = 'mines-banner win';
@@ -1388,7 +1867,6 @@
                 banner.innerText = '';
             }
 
-            // Toggle setup vs cashout controls
             document.getElementById('mines-play-controls').style.display = isPlaying ? 'block' : 'none';
             document.getElementById('mines-setup-controls').style.display = isPlaying ? 'none' : 'block';
 
@@ -1405,7 +1883,6 @@
                 document.getElementById('mines-start-btn').innerText = `▶ ጨዋታ ጀምር (${minesStake} ብር • ${minesCount} ቦምብ)`;
             }
 
-            // Render 5x5 Grid
             const grid = document.getElementById('mines-grid');
             grid.innerHTML = '';
             for (let i = 0; i < 25; i++) {
@@ -1519,6 +1996,10 @@
                 const res = await fetch(`/api/state?userId=${userId}`);
                 appState = await res.json();
                 lastSyncTime = Date.now();
+                if (appState.crash) {
+                    crashState = appState.crash;
+                    lastCrashSync = Date.now();
+                }
                 if (appState.activeMines && (!minesState || minesState.status !== 'playing')) {
                     minesState = appState.activeMines;
                     if (activeView === 'mines') renderMinesView();
@@ -1534,25 +2015,29 @@
 
         function renderUI() {
             if (!appState) return;
-            const { user, rooms, races, winnersHistory, botUsername } = appState;
+            const { user, rooms, races, crash, winnersHistory, botUsername } = appState;
 
-            // Wallet Balance
             document.getElementById('top-balance').innerText = `${user.balance.toLocaleString()} ብር`;
             document.getElementById('wallet-big-balance').innerText = `${user.balance.toLocaleString()} ብር`;
 
-            // Referral Link
             const realBot = botUsername || 'Deresegn16Bot';
             document.getElementById('ref-link').innerText = `https://t.me/${realBot}?start=ref_${userId}`;
             document.getElementById('ref-count').innerText = user.referralsCount || 0;
             document.getElementById('ref-earned').innerText = `${user.referralEarned || 0} ብር`;
 
-            // Lobby Live Timers & Ticker
             if (winnersHistory && winnersHistory.length > 0) {
                 const w0 = winnersHistory[0];
                 document.getElementById('lobby-ticker-text').innerText = `ዙር #${w0.round}: ${w0.first}`;
             }
             const etaMain = rooms["300"];
             document.getElementById('lobby-eta-timer').innerText = etaMain.status === 'drawing' ? '🎲 እየወጣ ነው!' : `⏱ ${formatSec(etaMain.timeLeft)}`;
+
+            if (crash) {
+                const lc = document.getElementById('lobby-crash-timer');
+                if (crash.status === 'driving') lc.innerText = `🚕 x${crash.currentMult.toFixed(2)}`;
+                else if (crash.status === 'crashed') lc.innerText = `💥 x${(crash.crashPoint || 1).toFixed(2)}`;
+                else lc.innerText = `⏱ ${Math.ceil(crash.timeLeftMs / 1000)}s`;
+            }
 
             if (races) {
                 const h = races.horse;
@@ -1561,11 +2046,9 @@
                 document.getElementById('lobby-dog-timer').innerText = d.status === 'racing' ? '🏁 እየሮጡ ነው!' : (d.status === 'result' ? '🏆 ውጤት!' : `⏱ ${formatSec(d.timeLeft)}`);
             }
 
-            // Render Active Game (Mines ሳይቆራረጥ እንዲሰራ እዚህ ላይ አይታደስም)
             if (activeView === 'eta') renderEtaRoom();
             if (activeView === 'race' && races) renderRaceView();
 
-            // Transactions
             document.getElementById('tx-list').innerHTML = user.transactions.slice(0, 25).map(t => `
                 <div class="tx-item">
                     <span>${t.type}</span>
@@ -1573,7 +2056,6 @@
                 </div>
             `).join('');
 
-            // Winners History
             document.getElementById('winners-list').innerHTML = winnersHistory.map(w => `
                 <div class="info-card">
                     <strong style="color:var(--gold); font-size:13px;">🏅 ዙር #${w.round} (${w.room} መደብ)</strong>
@@ -1742,7 +2224,6 @@
             }
         }
 
-        // Smooth 60ms Race Animation Loop
         setInterval(() => {
             if (activeView !== 'race' || !appState || !appState.races) return;
             const race = appState.races[currentRaceType];
