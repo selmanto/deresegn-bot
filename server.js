@@ -273,7 +273,13 @@ let races = {
 };
 
 function startRaceRun(race) {
-  const winnerId = pickFairWeightedWinner(race.runners);
+  let winnerId;
+  if (race.forcedWinner) {
+    winnerId = race.forcedWinner;
+    race.forcedWinner = null; // ለ 1 ዙር ብቻ ሰርቶ ወዲያው ወደ መደበኛው ይመለሳል
+  } else {
+    winnerId = pickFairWeightedWinner(race.runners);
+  }
   const others = shuffleArray(race.runners.map(r => r.id).filter(id => id !== winnerId));
   race.winnerId = winnerId;
   race.finishOrder = [winnerId, ...others];
@@ -950,6 +956,20 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             saveDB();
             await sendMessageToUser(chatId, `✅ ቻናሉ (${db.channelUrl || targetChannel}) በትክክል ተገናኝቷል! የመጀመሪያው የሙከራ ፖስት አሁን ተልኳል!`);
             await postWinnersToChannel();
+          }
+
+          if (msg.text.startsWith('/win')) {
+            if (!db.adminChatId || chatId !== String(db.adminChatId)) continue;
+            const parts = msg.text.trim().split(/\s+/);
+            const type = (parts[1] || '').toLowerCase();
+            const num = Number(parts[2]);
+            if (races[type] && num >= 1 && num <= 6) {
+              races[type].forcedWinner = num;
+              await sendMessageToUser(chatId, `✅ በዚህ ዙር ${races[type].title} ላይ #${num} እንዲያሸንፍ ተስተካክሏል (ለ 1 ዙር ብቻ)።`);
+            } else {
+              await sendMessageToUser(chatId, `⚠️ አጠቃቀም፦\n/win horse 4\nወይም\n/win dog 2`);
+            }
+            continue;
           }
 
           if (msg.text.startsWith('/postnow')) {
