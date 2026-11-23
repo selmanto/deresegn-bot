@@ -1,3 +1,4 @@
+
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
@@ -11,11 +12,15 @@ const DEFAULT_SUPPORT_URL = 'https://t.me/Deresengsupport';
 const MONGO_URI = 'mongodb+srv://selmantoon_db_user:nb7Kam5fxPcwWWS8@cluster0.jdz7hsp.mongodb.net/deresegnbot?retryWrites=true&w=majority';
 
 const MIN_RACE_BET = 10;
-const MAX_RACE_BET = 50; // ካፒታልህ ሲያድግ ወደ 100 ወይም 200 ማሳደግ ትችላለህ
+const MAX_RACE_BET = 50;
 
 const MIN_MINES_BET = 10;
 const MAX_MINES_BET = 50;
-const MAX_MINES_PAYOUT = 600; // በአንድ የ Mines ዙር የሚከፈል ከፍተኛ ሽልማት (የካዝና መከላከያ)
+const MAX_MINES_PAYOUT = 600;
+
+const MIN_CRASH_BET = 10;
+const MAX_CRASH_BET = 50;
+const MAX_CRASH_PAYOUT = 600; // በአንድ የ Lada Crash ዙር የሚከፈል ከፍተኛ ሽልማት
 
 const app = express();
 app.use(cors());
@@ -347,7 +352,7 @@ function resetRaceRound(race) {
 
 // ==================== 3. MINES GAME (5x5 INSTANT PLAY) ====================
 const VALID_MINES_COUNTS = [3, 5, 7, 10];
-let activeMinesGames = {}; // { [userId]: { amount, minesCount, mines: [], revealed: [], status } }
+let activeMinesGames = {};
 
 function calcMinesMultiplier(minesCount, revealedCount) {
   if (revealedCount <= 0) return 1.0;
@@ -355,7 +360,7 @@ function calcMinesMultiplier(minesCount, revealedCount) {
   for (let i = 0; i < revealedCount; i++) {
     prob *= (25 - minesCount - i) / (25 - i);
   }
-  const raw = 0.94 / prob; // 94% RTP (6% House Edge)
+  const raw = 0.94 / prob;
   return Math.max(1.01, Math.floor(raw * 100) / 100);
 }
 
@@ -383,6 +388,98 @@ function serializeMinesForUser(game, revealBombs = false, hitTile = null) {
     nextPayout,
     mines: revealBombs ? game.mines : [],
     hitTile
+  };
+}
+
+// ==================== 4. LADA CRASH GAME (LIVE MULTIPLIER) ====================
+const CRASH_GROWTH_RATE = 0.085; // ~8.1 ሰከንድ ላይ x2.00፣ ~18.9 ሰከንድ ላይ x5.00
+
+function generateCrashPoint() {
+  const r = Math.random();
+  const raw = 0.94 / (1 - r); // 94% RTP (6% House Edge)
+  if (raw < 1.01) return 1.00;
+  return Math.min(15.00, Math.floor(raw * 100) / 100);
+}
+
+function calcCrashMultiplier(elapsedMs) {
+  const sec = Math.max(0, elapsedMs) / 1000;
+  return Math.min(15.00, Math.floor(Math.pow(Math.E, CRASH_GROWTH_RATE * sec) * 100) / 100);
+}
+
+let crashGame = {
+  round: 501,
+  status: 'waiting', // 'waiting' (8s) -> 'driving' -> 'crashed' (4s)
+  phaseStartTime: Date.now(),
+  phaseDuration: 8000,
+  crashPoint: 1.00,
+  crashDurationMs: 0,
+  bets: {}, // { [userId]: { amount, cashedOut, cashoutMult, payout } }
+  history: [
+    { round: 500, crashPoint: 2.34 },
+    { round: 499, crashPoint: 1.18 },
+    { round: 498, crashPoint: 4.82 },
+    { round: 497, crashPoint: 1.65 },
+    { round: 496, crashPoint: 7.12 },
+    { round: 495, crashPoint: 1.04 }
+  ]
+};
+
+// Fast 100ms loop for Lada Crash precision
+setInterval(() => {
+  const now = Date.now();
+  const elapsed = now - crashGame.phaseStartTime;
+
+  if (crashGame.status === 'waiting') {
+    if (elapsed >= crashGame.phaseDuration) {
+      const cp = generateCrashPoint();
+      crashGame.crashPoint = cp;
+      crashGame.crashDurationMs = cp <= 1.00 ? 200 : Math.round((Math.log(cp) / CRASH_GROWTH_RATE) * 1000);
+      crashGame.status = 'driving';
+      crashGame.phaseStartTime = now;
+      crashGame.phaseDuration = crashGame.crashDurationMs;
+    }
+  } else if (crashGame.status === 'driving') {
+    if (elapsed >= crashGame.crashDurationMs) {
+      crashGame.status = 'crashed';
+      crashGame.phaseStartTime = now;
+      crashGame.phaseDuration = 4000;
+      crashGame.history.unshift({ round: crashGame.round, crashPoint: crashGame.crashPoint });
+      if (crashGame.history.length > 12) crashGame.history.pop();
+    }
+  } else if (crashGame.status === 'crashed') {
+    if (elapsed >= crashGame.phaseDuration) {
+      crashGame.round += 1;
+      crashGame.status = 'waiting';
+      crashGame.phaseStartTime = now;
+      crashGame.phaseDuration = 8000;
+      crashGame.crashPoint = 1.00;
+      crashGame.crashDurationMs = 0;
+      crashGame.bets = {};
+    }
+  }
+}, 100);
+
+function serializeCrashForUser(userId) {
+  const elapsedMs = Date.now() - crashGame.phaseStartTime;
+  const timeLeftMs = Math.max(0, crashGame.phaseDuration - elapsedMs);
+  let currentMult = 1.00;
+  if (crashGame.status === 'driving') {
+    currentMult = Math.min(crashGame.crashPoint, calcCrashMultiplier(elapsedMs));
+  } else if (crashGame.status === 'crashed') {
+    currentMult = crashGame.crashPoint;
+  }
+  return {
+    round: crashGame.round,
+    status: crashGame.status,
+    elapsedMs,
+    timeLeftMs,
+    currentMult,
+    crashPoint: crashGame.status === 'crashed' ? crashGame.crashPoint : null,
+    myBet: crashGame.bets[userId] || null,
+    history: crashGame.history,
+    minBet: MIN_CRASH_BET,
+    maxBet: MAX_CRASH_BET,
+    maxPayout: MAX_CRASH_PAYOUT
   };
 }
 
@@ -489,10 +586,102 @@ app.get('/api/state', (req, res) => {
     user: db.users[userId],
     rooms,
     races: serializeRacesForUser(userId),
+    crash: serializeCrashForUser(userId),
     activeMines: activeMinesGames[userId] ? serializeMinesForUser(activeMinesGames[userId], false) : null,
     winnersHistory: db.winnersHistory,
     botUsername
   });
+});
+
+// Lightweight Crash Poll Endpoint (Very Low Bandwidth)
+app.get('/api/crash/state', (req, res) => {
+  const userId = String(req.query.userId || "1001");
+  const user = db.users[userId];
+  res.json({
+    balance: user ? user.balance : 0,
+    crash: serializeCrashForUser(userId)
+  });
+});
+
+app.post('/api/crash/bet', (req, res) => {
+  const { userId = "1001", amount } = req.body;
+  const uid = String(userId);
+  const user = db.users[uid];
+  const numAmount = Math.floor(Number(amount));
+
+  if (!user) return res.status(400).json({ error: "ተጫዋች አልተገኘም!" });
+  if (crashGame.status !== 'waiting') {
+    return res.status(400).json({ error: "ላዳው ጉዞ ጀምሯል! ቀጣዩን ዙር ይጠብቁ።" });
+  }
+  if (crashGame.bets[uid]) {
+    return res.status(400).json({ error: "በዚህ ዙር ቀድመው መድበዋል!" });
+  }
+  if (!numAmount || numAmount < MIN_CRASH_BET || numAmount > MAX_CRASH_BET) {
+    return res.status(400).json({ error: `መደቡ ከ ${MIN_CRASH_BET} እስከ ${MAX_CRASH_BET} ብር መሆን አለበት!` });
+  }
+  if (user.balance < numAmount) {
+    return res.status(400).json({ error: `በቂ ቀሪ ሂሳብ የለም! (${numAmount} ብር ያስፈልጋል)` });
+  }
+
+  user.balance -= numAmount;
+  crashGame.bets[uid] = {
+    amount: numAmount,
+    cashedOut: false,
+    cashoutMult: null,
+    payout: 0
+  };
+  user.transactions.unshift({
+    type: `🚕 Lada Crash መደብ (ዙር #${crashGame.round})`,
+    amount: -numAmount,
+    time: "አሁን"
+  });
+
+  const { d } = getTodayStats();
+  d.bets += numAmount;
+  db.stats.totalBets += numAmount;
+  saveDB();
+
+  res.json({ success: true, balance: user.balance, crash: serializeCrashForUser(uid) });
+});
+
+app.post('/api/crash/cashout', (req, res) => {
+  const { userId = "1001" } = req.body;
+  const uid = String(userId);
+  const user = db.users[uid];
+  const bet = crashGame.bets[uid];
+
+  if (!user || !bet) return res.status(400).json({ error: "በዚህ ዙር የተመደበ መደብ የለም!" });
+  if (bet.cashedOut) return res.status(400).json({ error: "ሽልማትዎን ቀድመው ወስደዋል!" });
+  if (crashGame.status !== 'driving') {
+    return res.status(400).json({ error: "ላዳው ቆሟል! ቀጣዩን ዙር ይሞክሩ።" });
+  }
+
+  const elapsedMs = Date.now() - crashGame.phaseStartTime;
+  if (crashGame.crashPoint <= 1.00 || elapsedMs >= crashGame.crashDurationMs) {
+    return res.status(400).json({ error: "ለጥቂት አመለጠዎት — ላዳው ቆሟል!" });
+  }
+
+  const mult = Math.min(crashGame.crashPoint, Math.max(1.01, calcCrashMultiplier(elapsedMs)));
+  const payout = Math.min(MAX_CRASH_PAYOUT, Math.round(bet.amount * mult));
+
+  bet.cashedOut = true;
+  bet.cashoutMult = mult;
+  bet.payout = payout;
+
+  user.balance += payout;
+  user.transactions.unshift({
+    type: `🚕 Lada Crash ሽልማት (x${mult.toFixed(2)})`,
+    amount: payout,
+    status: 'Credited',
+    time: "አሁን"
+  });
+
+  const { d } = getTodayStats();
+  d.wins += payout;
+  db.stats.totalWins += payout;
+  saveDB();
+
+  res.json({ success: true, balance: user.balance, payout, mult, crash: serializeCrashForUser(uid) });
 });
 
 app.post('/api/buy', (req, res) => {
@@ -645,7 +834,6 @@ app.post('/api/mines/reveal', (req, res) => {
     return res.json({ success: true, balance: user.balance, game: serializeMinesForUser(game, false) });
   }
 
-  // ቦምብ ከነካ
   if (game.mines.includes(idx)) {
     game.status = 'lost';
     const finished = serializeMinesForUser(game, true, idx);
@@ -653,7 +841,6 @@ app.post('/api/mines/reveal', (req, res) => {
     return res.json({ success: true, balance: user.balance, game: finished });
   }
 
-  // አልማዝ ካገኘ
   game.revealed.push(idx);
   const payout = calcMinesPayout(game.amount, game.minesCount, game.revealed.length);
   const allSafeFound = game.revealed.length >= (25 - game.minesCount);
@@ -900,7 +1087,7 @@ async function postWinnersToChannel() {
 
   const postText = 
     `🎉 የደረሰኝ ጌም — የሰዓቱ አሸናፊዎች! 🎉\n\n` +
-    `በፈጣን እጣ፣ በፈረስ/ውሻ ውድድር እና በአዲሱ Mines ጨዋታ አሸናፊ የሆኑ እድለኞች ሽልማታቸው ወዲያውኑ ወደ ዋሌታቸው ገብቷል! 💸\n\n` +
+    `በአዲሱ 🚕 Lada Crash፣ 💣 Mines፣ የፈረስ/ውሻ ውድድር እና ፈጣን እጣ አሸናፊ የሆኑ እድለኞች ሽልማታቸው ወዲያውኑ ወደ ዋሌታቸው ገብቷል! 💸\n\n` +
     `${recentWinners}\n\n` +
     `🔥 ቀጣዩ ዙር አሁን ተጀምሯል!\n` +
     `👇 ለመጫወት ከታች ያለውን ቁልፍ ይጫኑ፦`;
@@ -962,7 +1149,7 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             if (cbData === 'my_invite') {
               const u = db.users[callerId] || { referralsCount: 0, referralEarned: 0 };
               const refLink = `https://t.me/${botUsername || 'Deresegn16Bot'}?start=ref_${callerId}`;
-              const shareText = encodeURIComponent(`🎁 ፈጣን እጣ፣ የፈረስ/ውሻ ውድድር እና 💣 Mines! አሁኑኑ ሲገቡ የ 10 ብር ነጻ ቦነስ ይሰጣል 👇`);
+              const shareText = encodeURIComponent(`🎁 🚕 Lada Crash፣ 💣 Mines፣ የፈረስ/ውሻ ውድድር እና ፈጣን እጣ! አሁኑኑ ሲገቡ የ 10 ብር ነጻ ቦነስ ይሰጣል 👇`);
               const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${shareText}`;
 
               await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
@@ -1028,7 +1215,6 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
           if (!msg) continue;
           const chatId = String(msg.chat.id);
 
-          // 📱 ተጫዋቹ ስልክ ቁጥሩን ሲያጋራ
           if (msg.contact) {
             if (String(msg.contact.user_id) !== String(msg.from?.id)) {
               await sendMessageToUser(chatId, `⚠️ እባክዎ የራስዎን ትክክለኛ የቴሌግራም ስልክ ቁጥር ብቻ ያጋሩ!`);
@@ -1083,7 +1269,6 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             continue;
           }
 
-          // 🖼️ ፎቶ ከነ ጽሑፉ ለሁሉም ተጫዋቾች መላኪያ (/broadcast በፎቶ Caption ላይ)
           if (msg.photo && msg.caption && msg.caption.startsWith('/broadcast')) {
             if (!db.adminChatId || chatId !== String(db.adminChatId)) continue;
             const photoId = msg.photo[msg.photo.length - 1].file_id;
@@ -1238,7 +1423,7 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             for (const uid of unverifiedIds) {
               const ok = await sendMessageToUser(
                 uid,
-                `🎁 የ 10 ብር ነጻ መጫወቻ ቦነስዎ እየጠበቀዎት ነው!\n\nስልክ ቁጥርዎን አረጋግጠው ወዲያውኑ 10 ብር ነጻ ቦነስ ለመውሰድና ፈጣን እጣ፣ የፈረስ/ውሻ ውድድር እና አዲሱን 💣 Mines ለመጫወት ከታች ያለውን ቁልፍ ይጫኑ 👇`,
+                `🎁 የ 10 ብር ነጻ መጫወቻ ቦነስዎ እየጠበቀዎት ነው!\n\nስልክ ቁጥርዎን አረጋግጠው ወዲያውኑ 10 ብር ነጻ ቦነስ ለመውሰድና አዲሱን 🚕 Lada Crash፣ 💣 Mines፣ የፈረስ/ውሻ ውድድር እና ፈጣን እጣ ለመጫወት ከታች ያለውን ቁልፍ ይጫኑ 👇`,
                 {
                   reply_markup: {
                     keyboard: [
@@ -1259,7 +1444,7 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             if (!db.adminChatId || chatId !== String(db.adminChatId)) continue;
             const broadcastMsg = msg.text.replace(/^\/broadcast\s*/i, '').trim();
             if (!broadcastMsg) {
-              await sendMessageToUser(chatId, `⚠️ የሚላከውን መልዕክት አብረው ይጻፉ!\n\nምሳሌ፦\n/broadcast 💣 አዲስ Mines ጨዋታ ተጨምሯል! አሁኑኑ ገብተው ይጫወቱ!`);
+              await sendMessageToUser(chatId, `⚠️ የሚላከውን መልዕክት አብረው ይጻፉ!\n\nምሳሌ፦\n/broadcast 🚕 አዲስ Lada Crash ጨዋታ ተጨምሯል! አሁኑኑ ገብተው ይጫወቱ!`);
               continue;
             }
 
@@ -1331,7 +1516,7 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 chat_id: chatId,
-                text: `🎉 እንኳን ወደ Deresegn Games በደህና መጡ, ${firstName}! 🎉\n\n💣 Mines • 🐎 የፈረስ ውድድር • 🐕 የውሻ ውድድር • 🎲 ፈጣን እጣ\n👇 ከታች ይምረጡ፦`,
+                text: `🎉 እንኳን ወደ Deresegn Games በደህና መጡ, ${firstName}! 🎉\n\n🚕 Lada Crash • 💣 Mines • 🐎 የፈረስ ውድድር • 🐕 የውሻ ውድድር • 🎲 ፈጣን እጣ\n👇 ከታች ይምረጡ፦`,
                 reply_markup: {
                   inline_keyboard: [
                     [{ text: "🎮 Play Now", web_app: { url: PUBLIC_URL } }],
