@@ -151,7 +151,7 @@
 
         .game-card {
             border-radius: 16px;
-            padding: 16px;
+            padding: 15px;
             margin-bottom: 12px;
             cursor: pointer;
             position: relative;
@@ -166,6 +166,10 @@
 
         .game-card:active {
             transform: scale(0.98);
+        }
+
+        .game-card.card-mines {
+            background: linear-gradient(135deg, #312e81 0%, #4f46e5 55%, #1e1b4b 100%);
         }
 
         .game-card.card-eta {
@@ -219,7 +223,7 @@
 
         .game-card p {
             font-size: 11px;
-            color: rgba(255, 255, 255, 0.82);
+            color: rgba(255, 255, 255, 0.84);
             line-height: 1.4;
         }
 
@@ -263,6 +267,149 @@
             font-size: 12px;
             font-weight: 700;
             cursor: pointer;
+        }
+
+        /* ==================== MINES GAME STYLES ==================== */
+        .mines-stats-bar {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .mines-stat-box {
+            background: var(--card);
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 8px 6px;
+            text-align: center;
+        }
+
+        .mines-stat-box span {
+            display: block;
+            font-size: 10px;
+            color: var(--muted);
+            margin-bottom: 2px;
+        }
+
+        .mines-stat-box strong {
+            font-size: 14px;
+            color: #fff;
+        }
+
+        .mines-banner {
+            display: none;
+            padding: 10px 12px;
+            border-radius: 11px;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .mines-banner.win {
+            display: block;
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: #fff;
+            box-shadow: 0 0 16px rgba(16, 185, 129, 0.45);
+        }
+
+        .mines-banner.lose {
+            display: block;
+            background: linear-gradient(135deg, #991b1b, #ef4444);
+            color: #fff;
+        }
+
+        .mines-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 7px;
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 14px;
+            padding: 10px;
+            margin-bottom: 12px;
+        }
+
+        .mine-tile {
+            aspect-ratio: 1 / 1;
+            background: linear-gradient(180deg, #25344d 0%, #1e293b 100%);
+            border: 2px solid #3b4f6e;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s ease, background 0.15s ease;
+            box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.35);
+        }
+
+        .mine-tile:active {
+            transform: scale(0.93);
+        }
+
+        .mine-tile.disabled {
+            cursor: default;
+            opacity: 0.72;
+        }
+
+        .mine-tile.safe {
+            background: linear-gradient(135deg, #065f46, #10b981);
+            border-color: #34d399;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.45);
+            animation: popIn 0.18s ease;
+        }
+
+        .mine-tile.bomb-hit {
+            background: linear-gradient(135deg, #991b1b, #ef4444);
+            border-color: #fca5a5;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.65);
+            animation: popIn 0.2s ease;
+        }
+
+        .mine-tile.bomb-reveal {
+            background: #2d1419;
+            border-color: #7f1d1d;
+            opacity: 0.9;
+        }
+
+        .mine-tile.dimmed {
+            opacity: 0.4;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.75); }
+            65% { transform: scale(1.08); }
+            100% { transform: scale(1); }
+        }
+
+        .mines-controls {
+            background: var(--card);
+            border: 1px solid #334155;
+            border-radius: 14px;
+            padding: 12px;
+        }
+
+        .btn-cashout {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #000;
+            font-size: 15px;
+            font-weight: 900;
+            cursor: pointer;
+            margin-bottom: 8px;
+            box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
+        }
+
+        .btn-cashout:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none;
         }
 
         /* ==================== VIRTUAL RACE TRACK STYLES ==================== */
@@ -406,7 +553,7 @@
         }
 
         .stake-btn {
-            background: var(--card);
+            background: #0f172a;
             border: 1px solid #334155;
             color: #fff;
             padding: 8px 4px;
@@ -788,7 +935,7 @@
         </div>
     </div>
 
-    <!-- TAB 1: ጨዋታዎች (LOBBY + 3 GAMES) -->
+    <!-- TAB 1: ጨዋታዎች (LOBBY + 4 GAMES) -->
     <div id="tab-play" class="tab-content active">
 
         <!-- SUB-VIEW A: GAME LOBBY -->
@@ -801,24 +948,24 @@
             <div class="lobby-hero">
                 <div>
                     <h2>🎮 መጫወት የሚፈልጉትን ጌም ይምረጡ</h2>
-                    <p>በአንድ ዋሌት 3 ፈጣን ጨዋታዎችን ይጫወቱ — ፈጣን ቴሌብር ወጪ!</p>
+                    <p>በአንድ ዋሌት 4 ፈጣን ጨዋታዎችን ይጫወቱ — ፈጣን ቴሌብር ወጪ!</p>
                 </div>
             </div>
 
-            <div class="lobby-title">⚡ ቀጥታ ጨዋታዎች (LIVE GAMES)</div>
+            <div class="lobby-title">⚡ ፈጣን ጨዋታዎች (4 GAMES)</div>
 
-            <!-- Card 1: Deresegn Eta -->
-            <div class="game-card card-eta" onclick="openGame('eta')">
+            <!-- Card 1: Mines (Instant Play) -->
+            <div class="game-card card-mines" onclick="openGame('mines')">
                 <div class="game-card-left">
                     <div class="game-badge-row">
-                        <span class="hot-badge">HOT</span>
-                        <span class="live-badge" id="lobby-eta-timer">⏱ 00:60</span>
+                        <span class="hot-badge" style="background:#a855f7;">NEW • INSTANT</span>
+                        <span class="live-badge">⚡ ያለ መጠበቅ</span>
                     </div>
-                    <h3>🎲 ደረሰኝ ፈጣን እጣ</h3>
-                    <p>10 • 50 • 100 • 300 ብር መደቦች<br>🥇 በየ 1 ደቂቃው እስከ <b>3,000 ብር</b> ሽልማት</p>
+                    <h3>💣 Mines (ቦምብ ማለፍ)</h3>
+                    <p>አልማዝ (💎) እየከፈቱ ሽልማትዎን ያባዙ<br>💰 በፈለጉት ሰዓት <b>Cash Out</b> ያድርጉ</p>
                 </div>
                 <div class="game-card-right">
-                    <span class="game-big-icon">🎲</span>
+                    <span class="game-big-icon">💣</span>
                     <span class="play-pill">ተጫወት ▶</span>
                 </div>
             </div>
@@ -827,7 +974,7 @@
             <div class="game-card card-horse" onclick="openGame('horse')">
                 <div class="game-card-left">
                     <div class="game-badge-row">
-                        <span class="hot-badge" style="background:#10b981;">NEW</span>
+                        <span class="hot-badge" style="background:#10b981;">LIVE</span>
                         <span class="live-badge" id="lobby-horse-timer">⏱ 00:30</span>
                     </div>
                     <h3>🐎 የፈረስ ውድድር</h3>
@@ -843,7 +990,7 @@
             <div class="game-card card-dog" onclick="openGame('dog')">
                 <div class="game-card-left">
                     <div class="game-badge-row">
-                        <span class="hot-badge" style="background:#f59e0b; color:#000;">NEW</span>
+                        <span class="hot-badge" style="background:#f59e0b; color:#000;">LIVE</span>
                         <span class="live-badge" id="lobby-dog-timer">⏱ 00:30</span>
                     </div>
                     <h3>🐕 የውሻ ውድድር</h3>
@@ -854,9 +1001,87 @@
                     <span class="play-pill">ተጫወት ▶</span>
                 </div>
             </div>
+
+            <!-- Card 4: Deresegn Eta -->
+            <div class="game-card card-eta" onclick="openGame('eta')">
+                <div class="game-card-left">
+                    <div class="game-badge-row">
+                        <span class="hot-badge">HOT</span>
+                        <span class="live-badge" id="lobby-eta-timer">⏱ 00:60</span>
+                    </div>
+                    <h3>🎲 ደረሰኝ ፈጣን እጣ</h3>
+                    <p>10 • 50 • 100 • 300 ብር መደቦች<br>🥇 በየ 1 ደቂቃው እስከ <b>3,000 ብር</b> ሽልማት</p>
+                </div>
+                <div class="game-card-right">
+                    <span class="game-big-icon">🎲</span>
+                    <span class="play-pill">ተጫወት ▶</span>
+                </div>
+            </div>
         </div>
 
-        <!-- SUB-VIEW B: DERESEGN ETA -->
+        <!-- SUB-VIEW B: MINES GAME -->
+        <div id="view-mines" class="game-view">
+            <div class="game-top-bar">
+                <button class="back-btn" onclick="openLobby()">⬅ ወደ ጨዋታዎች</button>
+                <span style="font-size:13px; font-weight:800; color:#c4b5fd;">💣 Mines (ቦምብ ማለፍ)</span>
+            </div>
+
+            <div class="mines-stats-bar">
+                <div class="mines-stat-box">
+                    <span>አሁን ያለ ኦድ</span>
+                    <strong id="mines-curr-mult" style="color:var(--gold);">x1.00</strong>
+                </div>
+                <div class="mines-stat-box">
+                    <span>ቀጣይ አልማዝ</span>
+                    <strong id="mines-next-mult" style="color:#34d399;">x1.17</strong>
+                </div>
+                <div class="mines-stat-box">
+                    <span>የሚወስዱት ሽልማት</span>
+                    <strong id="mines-curr-payout" style="color:#fde047;">0 ብር</strong>
+                </div>
+            </div>
+
+            <div class="mines-banner" id="mines-banner"></div>
+
+            <!-- 5x5 Mines Grid -->
+            <div class="mines-grid" id="mines-grid"></div>
+
+            <!-- Action Controls -->
+            <div class="mines-controls">
+                <div id="mines-play-controls" style="display:none;">
+                    <button class="btn-cashout" id="mines-cashout-btn" onclick="cashoutMinesGame()">
+                        💰 Cash Out (0 ብር ውሰድ)
+                    </button>
+                    <div style="text-align:center; font-size:11px; color:var(--muted);">
+                        💎 አልማዝ ባገኙ ቁጥር ሽልማቱ ይጨምራል፤ ቦምብ ሳይነኩ Cash Out ይንኩ!
+                    </div>
+                </div>
+
+                <div id="mines-setup-controls">
+                    <div style="font-size:11px; color:var(--muted); margin-bottom:5px;">1. የመደብ ብር ይምረጡ (ከ10 - 50 ብር)፦</div>
+                    <div class="stake-row" id="mines-stake-row">
+                        <div class="stake-btn active" onclick="selectMinesStake(10, this)">10 ብር</div>
+                        <div class="stake-btn" onclick="selectMinesStake(20, this)">20 ብር</div>
+                        <div class="stake-btn" onclick="selectMinesStake(30, this)">30 ብር</div>
+                        <div class="stake-btn" onclick="selectMinesStake(50, this)">50 ብር</div>
+                    </div>
+
+                    <div style="font-size:11px; color:var(--muted); margin-bottom:5px;">2. የቦምብ ብዛት ይምረጡ (ቦምቡ ሲበዛ ሽልማቱ ይጨምራል)፦</div>
+                    <div class="stake-row" id="mines-count-row">
+                        <div class="stake-btn" onclick="selectMinesCount(3, this)">3 💣</div>
+                        <div class="stake-btn active" onclick="selectMinesCount(5, this)">5 💣</div>
+                        <div class="stake-btn" onclick="selectMinesCount(7, this)">7 💣</div>
+                        <div class="stake-btn" onclick="selectMinesCount(10, this)">10 💣</div>
+                    </div>
+
+                    <button class="btn-main" id="mines-start-btn" onclick="startMinesGame()">
+                        ▶ ጨዋታ ጀምር (10 ብር • 5 ቦምብ)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUB-VIEW C: DERESEGN ETA -->
         <div id="view-eta" class="game-view">
             <div class="game-top-bar">
                 <button class="back-btn" onclick="openLobby()">⬅ ወደ ጨዋታዎች</button>
@@ -901,7 +1126,7 @@
             <button class="btn-main" id="buy-btn" onclick="buySelectedSlots()">ከዋሌት ከፍለው ቁጥር ይያዙ</button>
         </div>
 
-        <!-- SUB-VIEW C: VIRTUAL RACING (HORSE & DOG) -->
+        <!-- SUB-VIEW D: VIRTUAL RACING (HORSE & DOG) -->
         <div id="view-race" class="game-view">
             <div class="game-top-bar">
                 <button class="back-btn" onclick="openLobby()">⬅ ወደ ጨዋታዎች</button>
@@ -1038,12 +1263,19 @@
         const userId = String(tg.initDataUnsafe?.user?.id || "1001");
         document.getElementById('playerName').value = tg.initDataUnsafe?.user?.first_name || "ተጫዋች";
 
-        let activeView = 'lobby'; // 'lobby', 'eta', 'race'
+        let activeView = 'lobby'; // 'lobby', 'eta', 'race', 'mines'
         let currentRoomId = "300";
-        let currentRaceType = "horse"; // 'horse' or 'dog'
+        let currentRaceType = "horse";
         let selectedSlots = [];
         let selectedRunnerId = null;
         let selectedRaceStake = 10;
+
+        // Mines State
+        let minesStake = 10;
+        let minesCount = 5;
+        let minesState = null;
+        let minesBusy = false;
+
         let appState = null;
         let lastSyncTime = Date.now();
         let builtTrackType = null;
@@ -1064,13 +1296,17 @@
             switchTab('play', document.getElementById('nav-play'));
             if (game === 'eta') {
                 setGameView('eta');
+                renderUI();
+            } else if (game === 'mines') {
+                setGameView('mines');
+                renderMinesView();
             } else {
                 currentRaceType = game;
                 selectedRunnerId = null;
                 builtTrackType = null;
                 setGameView('race');
+                renderUI();
             }
-            renderUI();
         }
 
         function selectRoom(roomId) {
@@ -1083,7 +1319,7 @@
 
         function selectRaceStake(amount, el) {
             selectedRaceStake = amount;
-            document.querySelectorAll('.stake-btn').forEach(b => b.classList.remove('active'));
+            el.parentElement.querySelectorAll('.stake-btn').forEach(b => b.classList.remove('active'));
             el.classList.add('active');
             renderRacePanel();
         }
@@ -1093,11 +1329,200 @@
             renderRacePanel();
         }
 
+        // ==================== MINES FUNCTIONS ====================
+        function previewFirstMultiplier(count) {
+            const prob = (25 - count) / 25;
+            return (Math.floor((0.94 / prob) * 100) / 100).toFixed(2);
+        }
+
+        function selectMinesStake(amount, el) {
+            minesStake = amount;
+            document.querySelectorAll('#mines-stake-row .stake-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            renderMinesView();
+        }
+
+        function selectMinesCount(count, el) {
+            minesCount = count;
+            document.querySelectorAll('#mines-count-row .stake-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            renderMinesView();
+        }
+
+        function updateBalanceDisplay(bal) {
+            if (typeof bal !== 'number') return;
+            if (appState && appState.user) appState.user.balance = bal;
+            document.getElementById('top-balance').innerText = `${bal.toLocaleString()} ብር`;
+            document.getElementById('wallet-big-balance').innerText = `${bal.toLocaleString()} ብር`;
+        }
+
+        function renderMinesView() {
+            const isPlaying = minesState && minesState.status === 'playing';
+            const isFinished = minesState && (minesState.status === 'won' || minesState.status === 'lost');
+
+            // Top stats
+            if (isPlaying) {
+                document.getElementById('mines-curr-mult').innerText = `x${minesState.multiplier.toFixed(2)}`;
+                document.getElementById('mines-next-mult').innerText = `x${minesState.nextMultiplier.toFixed(2)}`;
+                document.getElementById('mines-curr-payout').innerText = `${minesState.payout} ብር`;
+            } else if (isFinished) {
+                document.getElementById('mines-curr-mult').innerText = minesState.status === 'won' ? `x${minesState.multiplier.toFixed(2)}` : 'x0.00';
+                document.getElementById('mines-next-mult').innerText = `x${previewFirstMultiplier(minesCount)}`;
+                document.getElementById('mines-curr-payout').innerText = minesState.status === 'won' ? `${minesState.payout} ብር` : '0 ብር';
+            } else {
+                document.getElementById('mines-curr-mult').innerText = 'x1.00';
+                document.getElementById('mines-next-mult').innerText = `x${previewFirstMultiplier(minesCount)}`;
+                document.getElementById('mines-curr-payout').innerText = '0 ብር';
+            }
+
+            // Banner
+            const banner = document.getElementById('mines-banner');
+            if (minesState && minesState.status === 'won') {
+                banner.className = 'mines-banner win';
+                banner.innerText = `🎉 እንኳን ደስ አለዎት! ${minesState.payout} ብር (x${minesState.multiplier.toFixed(2)}) ወደ ዋሌትዎ ገብቷል!`;
+            } else if (minesState && minesState.status === 'lost') {
+                banner.className = 'mines-banner lose';
+                banner.innerText = `💥 ቦምብ ነኩ! በድጋሚ ይሞክሩ።`;
+            } else {
+                banner.className = 'mines-banner';
+                banner.innerText = '';
+            }
+
+            // Toggle setup vs cashout controls
+            document.getElementById('mines-play-controls').style.display = isPlaying ? 'block' : 'none';
+            document.getElementById('mines-setup-controls').style.display = isPlaying ? 'none' : 'block';
+
+            if (isPlaying) {
+                const cashBtn = document.getElementById('mines-cashout-btn');
+                if (minesState.revealed.length === 0) {
+                    cashBtn.disabled = true;
+                    cashBtn.innerText = `💎 ቢያንስ 1 ሳጥን ይክፈቱ...`;
+                } else {
+                    cashBtn.disabled = false;
+                    cashBtn.innerText = `💰 Cash Out — ${minesState.payout} ብር ውሰድ (x${minesState.multiplier.toFixed(2)})`;
+                }
+            } else {
+                document.getElementById('mines-start-btn').innerText = `▶ ጨዋታ ጀምር (${minesStake} ብር • ${minesCount} ቦምብ)`;
+            }
+
+            // Render 5x5 Grid
+            const grid = document.getElementById('mines-grid');
+            grid.innerHTML = '';
+            for (let i = 0; i < 25; i++) {
+                const tile = document.createElement('div');
+                const isSafe = minesState && minesState.revealed.includes(i);
+                const isBomb = isFinished && minesState.mines.includes(i);
+                const isHit = isFinished && minesState.hitTile === i;
+
+                if (isHit) {
+                    tile.className = 'mine-tile bomb-hit';
+                    tile.innerText = '💥';
+                } else if (isSafe) {
+                    tile.className = 'mine-tile safe';
+                    tile.innerText = '💎';
+                } else if (isBomb) {
+                    tile.className = 'mine-tile bomb-reveal';
+                    tile.innerText = '💣';
+                } else if (isPlaying) {
+                    tile.className = 'mine-tile';
+                    tile.innerText = '';
+                    tile.onclick = () => clickMineTile(i);
+                } else {
+                    tile.className = `mine-tile disabled ${isFinished ? 'dimmed' : ''}`;
+                    tile.innerText = isFinished ? '💎' : '';
+                }
+                grid.appendChild(tile);
+            }
+        }
+
+        async function startMinesGame() {
+            if (minesBusy) return;
+            minesBusy = true;
+            const btn = document.getElementById('mines-start-btn');
+            btn.disabled = true;
+            try {
+                const res = await fetch('/api/mines/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, amount: minesStake, minesCount })
+                });
+                const data = await res.json();
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    minesState = data.game;
+                    updateBalanceDisplay(data.balance);
+                    renderMinesView();
+                }
+            } catch (e) {
+                alert('የኢንተርኔት ችግር አጋጥሟል፤ እባክዎ ደግመው ይሞክሩ።');
+            } finally {
+                btn.disabled = false;
+                minesBusy = false;
+            }
+        }
+
+        async function clickMineTile(tileIndex) {
+            if (minesBusy || !minesState || minesState.status !== 'playing') return;
+            minesBusy = true;
+            try {
+                const res = await fetch('/api/mines/reveal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, tileIndex })
+                });
+                const data = await res.json();
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    minesState = data.game;
+                    updateBalanceDisplay(data.balance);
+                    renderMinesView();
+                    if (minesState.status !== 'playing') fetchState();
+                }
+            } catch (e) {
+                alert('የኢንተርኔት ችግር አጋጥሟል፤ እባክዎ ደግመው ይሞክሩ።');
+            } finally {
+                minesBusy = false;
+            }
+        }
+
+        async function cashoutMinesGame() {
+            if (minesBusy || !minesState || minesState.status !== 'playing' || minesState.revealed.length === 0) return;
+            minesBusy = true;
+            const cashBtn = document.getElementById('mines-cashout-btn');
+            cashBtn.disabled = true;
+            try {
+                const res = await fetch('/api/mines/cashout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId })
+                });
+                const data = await res.json();
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    minesState = data.game;
+                    updateBalanceDisplay(data.balance);
+                    renderMinesView();
+                    fetchState();
+                }
+            } catch (e) {
+                alert('የኢንተርኔት ችግር አጋጥሟል፤ እባክዎ ደግመው ይሞክሩ።');
+            } finally {
+                minesBusy = false;
+            }
+        }
+
         async function fetchState() {
             try {
                 const res = await fetch(`/api/state?userId=${userId}`);
                 appState = await res.json();
                 lastSyncTime = Date.now();
+                if (appState.activeMines && (!minesState || minesState.status !== 'playing')) {
+                    minesState = appState.activeMines;
+                    if (activeView === 'mines') renderMinesView();
+                }
                 renderUI();
             } catch (e) {}
         }
@@ -1136,7 +1561,7 @@
                 document.getElementById('lobby-dog-timer').innerText = d.status === 'racing' ? '🏁 እየሮጡ ነው!' : (d.status === 'result' ? '🏆 ውጤት!' : `⏱ ${formatSec(d.timeLeft)}`);
             }
 
-            // Render Active Game
+            // Render Active Game (Mines ሳይቆራረጥ እንዲሰራ እዚህ ላይ አይታደስም)
             if (activeView === 'eta') renderEtaRoom();
             if (activeView === 'race' && races) renderRaceView();
 
@@ -1257,7 +1682,6 @@
 
             ensureTrackLanes(race);
 
-            // Winner Banner
             const winBanner = document.getElementById('race-winner-banner');
             if (race.status === 'result' && race.winnerId) {
                 const winR = race.runners.find(r => r.id === race.winnerId);
@@ -1269,12 +1693,10 @@
                 winBanner.style.display = 'none';
             }
 
-            // Recent Winners History
             document.getElementById('race-history').innerHTML =
                 `<span style="font-size:10px; color:var(--muted); white-space:nowrap;">የቅርብ አሸናፊዎች:</span>` +
                 race.history.map(h => `<span class="hist-pill" style="background:${h.color};">#${h.winnerId} (x${h.odd})</span>`).join('');
 
-            // My Bets in Current Round
             const myBetsEl = document.getElementById('race-my-bets');
             if (race.myBets && race.myBets.length > 0) {
                 myBetsEl.style.display = 'block';
@@ -1343,7 +1765,6 @@
                     const t = Math.max(0, Math.min(1, elapsed / 11500));
                     const target = finishPositions[rank] ?? 58;
 
-                    // በሩጫው መሃል እንዲቀዳደሙ የሚያደርግ ለስላሳ ሞገድ
                     const seed = (race.round * 13 + r.id * 7) % 11;
                     const wave = Math.sin(t * Math.PI) * (Math.sin(t * Math.PI * (2.2 + seed * 0.25) + seed) * 9);
                     const pos = 8 + (target - 8) * Math.pow(t, 0.92) + wave;
@@ -1485,10 +1906,8 @@
             el.classList.add('active');
         }
 
-        // በየ 3 ሰከንዱ ከሰርቨር ዳታ ማምጣት
         setInterval(fetchState, 3000);
 
-        // ሰዓቱን በየ 1 ሰከንዱ ስልኩ ላይ መቁጠር እና ዙር ሲቀየር ወዲያው ማምጣት
         setInterval(() => {
             if (!appState) return;
             let needSync = false;
