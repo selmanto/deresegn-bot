@@ -11,7 +11,11 @@ const DEFAULT_SUPPORT_URL = 'https://t.me/Deresengsupport';
 const MONGO_URI = 'mongodb+srv://selmantoon_db_user:nb7Kam5fxPcwWWS8@cluster0.jdz7hsp.mongodb.net/deresegnbot?retryWrites=true&w=majority';
 
 const MIN_RACE_BET = 10;
-const MAX_RACE_BET = 50; // ካፒታልህ ሲያድግ ይህንን ወደ 100 ወይም 200 ማሳደግ ትችላለህ
+const MAX_RACE_BET = 50; // ካፒታልህ ሲያድግ ወደ 100 ወይም 200 ማሳደግ ትችላለህ
+
+const MIN_MINES_BET = 10;
+const MAX_MINES_BET = 50;
+const MAX_MINES_PAYOUT = 600; // በአንድ የ Mines ዙር የሚከፈል ከፍተኛ ሽልማት (የካዝና መከላከያ)
 
 const app = express();
 app.use(cors());
@@ -194,7 +198,7 @@ function drawRoomWinner(room) {
   }, 6000);
 }
 
-// ==================== 2. VIRTUAL RACING (HORSE & DOG — 6 RUNNERS, FAIR FIXED ODDS) ====================
+// ==================== 2. VIRTUAL RACING (HORSE & DOG — 6 RUNNERS) ====================
 const RACE_ODDS_POOL = [2.9, 3.8, 5.0, 6.5, 9.0, 12.0];
 const LANE_COLORS = ['#ef4444', '#3b82f6', '#eab308', '#10b981', '#a855f7', '#f97316'];
 const HORSE_NAMES = ['ነብር', 'ንስር', 'መብረቅ', 'አንበሳ', 'ነፋስ', 'ኮከብ'];
@@ -237,7 +241,7 @@ let races = {
     title: 'የፈረስ ውድድር',
     emoji: '🐎',
     round: 201,
-    status: 'betting', // betting (30s) -> racing (12s) -> result (6s)
+    status: 'betting',
     timeLeft: 30,
     phaseDuration: 30,
     phaseStartTime: Date.now(),
@@ -245,6 +249,7 @@ let races = {
     bets: [],
     finishOrder: null,
     winnerId: null,
+    forcedWinner: null,
     history: [
       { round: 200, winnerId: 3, name: 'መብረቅ', odd: 5.0, color: LANE_COLORS[2] },
       { round: 199, winnerId: 1, name: 'ነብር', odd: 2.9, color: LANE_COLORS[0] },
@@ -257,13 +262,14 @@ let races = {
     emoji: '🐕',
     round: 301,
     status: 'betting',
-    timeLeft: 20, // ከፈረሱ ጋር በአንድ ሰከንድ እንዳይገጣጠም
+    timeLeft: 20,
     phaseDuration: 30,
     phaseStartTime: Date.now() - 10000,
     runners: buildRunners('dog'),
     bets: [],
     finishOrder: null,
     winnerId: null,
+    forcedWinner: null,
     history: [
       { round: 300, winnerId: 2, name: 'ሮኪ', odd: 3.8, color: LANE_COLORS[1] },
       { round: 299, winnerId: 6, name: 'ፍላሽ', odd: 12.0, color: LANE_COLORS[5] },
@@ -276,7 +282,7 @@ function startRaceRun(race) {
   let winnerId;
   if (race.forcedWinner) {
     winnerId = race.forcedWinner;
-    race.forcedWinner = null; // ለ 1 ዙር ብቻ ሰርቶ ወዲያው ወደ መደበኛው ይመለሳል
+    race.forcedWinner = null;
   } else {
     winnerId = pickFairWeightedWinner(race.runners);
   }
@@ -339,9 +345,49 @@ function resetRaceRound(race) {
   race.winnerId = null;
 }
 
+// ==================== 3. MINES GAME (5x5 INSTANT PLAY) ====================
+const VALID_MINES_COUNTS = [3, 5, 7, 10];
+let activeMinesGames = {}; // { [userId]: { amount, minesCount, mines: [], revealed: [], status } }
+
+function calcMinesMultiplier(minesCount, revealedCount) {
+  if (revealedCount <= 0) return 1.0;
+  let prob = 1.0;
+  for (let i = 0; i < revealedCount; i++) {
+    prob *= (25 - minesCount - i) / (25 - i);
+  }
+  const raw = 0.94 / prob; // 94% RTP (6% House Edge)
+  return Math.max(1.01, Math.floor(raw * 100) / 100);
+}
+
+function calcMinesPayout(amount, minesCount, revealedCount) {
+  if (revealedCount <= 0) return 0;
+  const mult = calcMinesMultiplier(minesCount, revealedCount);
+  return Math.min(MAX_MINES_PAYOUT, Math.round(amount * mult));
+}
+
+function serializeMinesForUser(game, revealBombs = false, hitTile = null) {
+  if (!game) return null;
+  const revCount = game.revealed.length;
+  const mult = calcMinesMultiplier(game.minesCount, revCount);
+  const nextMult = revCount < (25 - game.minesCount) ? calcMinesMultiplier(game.minesCount, revCount + 1) : mult;
+  const payout = calcMinesPayout(game.amount, game.minesCount, revCount);
+  const nextPayout = Math.min(MAX_MINES_PAYOUT, Math.round(game.amount * nextMult));
+  return {
+    status: game.status,
+    amount: game.amount,
+    minesCount: game.minesCount,
+    revealed: game.revealed,
+    multiplier: mult,
+    nextMultiplier: nextMult,
+    payout,
+    nextPayout,
+    mines: revealBombs ? game.mines : [],
+    hitTile
+  };
+}
+
 // Main 1-second Game Loop (Rooms + Races)
 setInterval(() => {
-  // Update Eta Rooms
   Object.values(rooms).forEach(room => {
     if (room.status === "betting") {
       room.timeLeft -= 1;
@@ -361,7 +407,6 @@ setInterval(() => {
     }
   });
 
-  // Update Virtual Races
   Object.values(races).forEach(race => {
     race.timeLeft -= 1;
     if (race.timeLeft <= 0) {
@@ -444,6 +489,7 @@ app.get('/api/state', (req, res) => {
     user: db.users[userId],
     rooms,
     races: serializeRacesForUser(userId),
+    activeMines: activeMinesGames[userId] ? serializeMinesForUser(activeMinesGames[userId], false) : null,
     winnersHistory: db.winnersHistory,
     botUsername
   });
@@ -528,6 +574,151 @@ app.post('/api/race/bet', (req, res) => {
   saveDB();
 
   res.json({ success: true, balance: user.balance });
+});
+
+// ==================== MINES API ENDPOINTS ====================
+app.post('/api/mines/start', (req, res) => {
+  const { userId = "1001", amount, minesCount } = req.body;
+  const uid = String(userId);
+  const user = db.users[uid];
+  const numAmount = Math.floor(Number(amount));
+  const numMines = Number(minesCount);
+
+  if (!user) return res.status(400).json({ error: "ተጫዋች አልተገኘም!" });
+  if (activeMinesGames[uid]) {
+    return res.json({ success: true, balance: user.balance, game: serializeMinesForUser(activeMinesGames[uid], false) });
+  }
+  if (!VALID_MINES_COUNTS.includes(numMines)) {
+    return res.status(400).json({ error: "የቦምብ ብዛት 3፣ 5፣ 7 ወይም 10 መሆን አለበት!" });
+  }
+  if (!numAmount || numAmount < MIN_MINES_BET || numAmount > MAX_MINES_BET) {
+    return res.status(400).json({ error: `መደቡ ከ ${MIN_MINES_BET} እስከ ${MAX_MINES_BET} ብር መሆን አለበት!` });
+  }
+  if (user.balance < numAmount) {
+    return res.status(400).json({ error: `በቂ ቀሪ ሂሳብ የለም! (${numAmount} ብር ያስፈልጋል)` });
+  }
+
+  user.balance -= numAmount;
+  user.transactions.unshift({
+    type: `💣 Mines መደብ (${numMines} ቦምብ)`,
+    amount: -numAmount,
+    time: "አሁን"
+  });
+
+  const { d } = getTodayStats();
+  d.bets += numAmount;
+  db.stats.totalBets += numAmount;
+  saveDB();
+
+  const allIndices = Array.from({ length: 25 }, (_, i) => i);
+  const mines = shuffleArray(allIndices).slice(0, numMines);
+
+  activeMinesGames[uid] = {
+    amount: numAmount,
+    minesCount: numMines,
+    mines,
+    revealed: [],
+    status: 'playing'
+  };
+
+  res.json({
+    success: true,
+    balance: user.balance,
+    game: serializeMinesForUser(activeMinesGames[uid], false)
+  });
+});
+
+app.post('/api/mines/reveal', (req, res) => {
+  const { userId = "1001", tileIndex } = req.body;
+  const uid = String(userId);
+  const user = db.users[uid];
+  const game = activeMinesGames[uid];
+  const idx = Number(tileIndex);
+
+  if (!user || !game || game.status !== 'playing') {
+    return res.status(400).json({ error: "ንቁ የ Mines ጨዋታ የለም! መጀመሪያ ጨዋታ ጀምር ይጫኑ።" });
+  }
+  if (!Number.isInteger(idx) || idx < 0 || idx > 24) {
+    return res.status(400).json({ error: "ትክክለኛ ሳጥን ይምረጡ!" });
+  }
+  if (game.revealed.includes(idx)) {
+    return res.json({ success: true, balance: user.balance, game: serializeMinesForUser(game, false) });
+  }
+
+  // ቦምብ ከነካ
+  if (game.mines.includes(idx)) {
+    game.status = 'lost';
+    const finished = serializeMinesForUser(game, true, idx);
+    delete activeMinesGames[uid];
+    return res.json({ success: true, balance: user.balance, game: finished });
+  }
+
+  // አልማዝ ካገኘ
+  game.revealed.push(idx);
+  const payout = calcMinesPayout(game.amount, game.minesCount, game.revealed.length);
+  const allSafeFound = game.revealed.length >= (25 - game.minesCount);
+
+  if (allSafeFound || payout >= MAX_MINES_PAYOUT) {
+    game.status = 'won';
+    user.balance += payout;
+    const mult = calcMinesMultiplier(game.minesCount, game.revealed.length);
+    user.transactions.unshift({
+      type: `💎 Mines ሽልማት (${game.revealed.length} አልማዝ • x${mult})`,
+      amount: payout,
+      status: 'Credited',
+      time: "አሁን"
+    });
+    const { d } = getTodayStats();
+    d.wins += payout;
+    db.stats.totalWins += payout;
+    saveDB();
+
+    const finished = serializeMinesForUser(game, true);
+    delete activeMinesGames[uid];
+    return res.json({ success: true, balance: user.balance, game: finished });
+  }
+
+  res.json({
+    success: true,
+    balance: user.balance,
+    game: serializeMinesForUser(game, false)
+  });
+});
+
+app.post('/api/mines/cashout', (req, res) => {
+  const { userId = "1001" } = req.body;
+  const uid = String(userId);
+  const user = db.users[uid];
+  const game = activeMinesGames[uid];
+
+  if (!user || !game || game.status !== 'playing') {
+    return res.status(400).json({ error: "ንቁ ጨዋታ የለም!" });
+  }
+  if (game.revealed.length === 0) {
+    return res.status(400).json({ error: "Cash Out ለማድረግ ቢያንስ 1 ሳጥን ይክፈቱ!" });
+  }
+
+  const payout = calcMinesPayout(game.amount, game.minesCount, game.revealed.length);
+  const mult = calcMinesMultiplier(game.minesCount, game.revealed.length);
+  game.status = 'won';
+
+  user.balance += payout;
+  user.transactions.unshift({
+    type: `💎 Mines ሽልማት (${game.revealed.length} አልማዝ • x${mult})`,
+    amount: payout,
+    status: 'Credited',
+    time: "አሁን"
+  });
+
+  const { d } = getTodayStats();
+  d.wins += payout;
+  db.stats.totalWins += payout;
+  saveDB();
+
+  const finished = serializeMinesForUser(game, true);
+  delete activeMinesGames[uid];
+
+  res.json({ success: true, balance: user.balance, game: finished });
 });
 
 async function notifyAdmin(text, screenshot = null, buttons = null) {
@@ -708,8 +899,8 @@ async function postWinnersToChannel() {
   ).join('\n\n');
 
   const postText = 
-    `🎉 የደረሰኝ ፈጣን እጣ — የሰዓቱ አሸናፊዎች! 🎉\n\n` +
-    `በየደቂቃው በሚወጣው እጣችን እና በፈረስ/ውሻ ውድድሮቻችን አሸናፊ የሆኑ እድለኞች ሽልማታቸው ወዲያውኑ ወደ ዋሌታቸው ገብቷል! 💸\n\n` +
+    `🎉 የደረሰኝ ጌም — የሰዓቱ አሸናፊዎች! 🎉\n\n` +
+    `በፈጣን እጣ፣ በፈረስ/ውሻ ውድድር እና በአዲሱ Mines ጨዋታ አሸናፊ የሆኑ እድለኞች ሽልማታቸው ወዲያውኑ ወደ ዋሌታቸው ገብቷል! 💸\n\n` +
     `${recentWinners}\n\n` +
     `🔥 ቀጣዩ ዙር አሁን ተጀምሯል!\n` +
     `👇 ለመጫወት ከታች ያለውን ቁልፍ ይጫኑ፦`;
@@ -770,8 +961,8 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
 
             if (cbData === 'my_invite') {
               const u = db.users[callerId] || { referralsCount: 0, referralEarned: 0 };
-              const refLink = `https://t.me/${botUsername || 'DeresegnBot'}?start=ref_${callerId}`;
-              const shareText = encodeURIComponent(`🎁 ፈጣን እጣ፣ የፈረስ እና የውሻ ውድድር! አሁኑኑ ሲገቡ የ 10 ብር ነጻ ቦነስ ይሰጣል 👇`);
+              const refLink = `https://t.me/${botUsername || 'Deresegn16Bot'}?start=ref_${callerId}`;
+              const shareText = encodeURIComponent(`🎁 ፈጣን እጣ፣ የፈረስ/ውሻ ውድድር እና 💣 Mines! አሁኑኑ ሲገቡ የ 10 ብር ነጻ ቦነስ ይሰጣል 👇`);
               const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${shareText}`;
 
               await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
@@ -892,7 +1083,7 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             continue;
           }
 
-                    // 🖼️ ፎቶ ከነ ጽሑፉ ለሁሉም ተጫዋቾች መላኪያ (/broadcast በፎቶ Caption ላይ)
+          // 🖼️ ፎቶ ከነ ጽሑፉ ለሁሉም ተጫዋቾች መላኪያ (/broadcast በፎቶ Caption ላይ)
           if (msg.photo && msg.caption && msg.caption.startsWith('/broadcast')) {
             if (!db.adminChatId || chatId !== String(db.adminChatId)) continue;
             const photoId = msg.photo[msg.photo.length - 1].file_id;
@@ -923,7 +1114,6 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             await sendMessageToUser(chatId, `📢 የፎቶ Broadcast ተጠናቋል!\n✅ የተላከላቸው: ${sent}\n❌ ያልደረሳቸው: ${failed}`);
             continue;
           }
-
 
           if (!msg.text) continue;
 
@@ -1048,7 +1238,7 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             for (const uid of unverifiedIds) {
               const ok = await sendMessageToUser(
                 uid,
-                `🎁 የ 10 ብር ነጻ መጫወቻ ቦነስዎ እየጠበቀዎት ነው!\n\nስልክ ቁጥርዎን አረጋግጠው ወዲያውኑ 10 ብር ነጻ ቦነስ ለመውሰድና ፈጣን እጣ፣ የፈረስ እና የውሻ ውድድር ለመጫወት ከታች ያለውን ቁልፍ ይጫኑ 👇`,
+                `🎁 የ 10 ብር ነጻ መጫወቻ ቦነስዎ እየጠበቀዎት ነው!\n\nስልክ ቁጥርዎን አረጋግጠው ወዲያውኑ 10 ብር ነጻ ቦነስ ለመውሰድና ፈጣን እጣ፣ የፈረስ/ውሻ ውድድር እና አዲሱን 💣 Mines ለመጫወት ከታች ያለውን ቁልፍ ይጫኑ 👇`,
                 {
                   reply_markup: {
                     keyboard: [
@@ -1069,7 +1259,7 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             if (!db.adminChatId || chatId !== String(db.adminChatId)) continue;
             const broadcastMsg = msg.text.replace(/^\/broadcast\s*/i, '').trim();
             if (!broadcastMsg) {
-              await sendMessageToUser(chatId, `⚠️ የሚላከውን መልዕክት አብረው ይጻፉ!\n\nምሳሌ፦\n/broadcast 🔥 አዲስ የፈረስ እና የውሻ ውድድር ተጨምሯል! አሁኑኑ ገብተው ይጫወቱ!`);
+              await sendMessageToUser(chatId, `⚠️ የሚላከውን መልዕክት አብረው ይጻፉ!\n\nምሳሌ፦\n/broadcast 💣 አዲስ Mines ጨዋታ ተጨምሯል! አሁኑኑ ገብተው ይጫወቱ!`);
               continue;
             }
 
@@ -1141,7 +1331,7 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 chat_id: chatId,
-                text: `🎉 Welcome To Deresegn Games, ${firstName}! 🎉\n\n🎲 ፈጣን እጣ • 🐎 የፈረስ ውድድር • 🐕 የውሻ ውድድር\n👇 Select an option below:`,
+                text: `🎉 እንኳን ወደ Deresegn Games በደህና መጡ, ${firstName}! 🎉\n\n💣 Mines • 🐎 የፈረስ ውድድር • 🐕 የውሻ ውድድር • 🎲 ፈጣን እጣ\n👇 ከታች ይምረጡ፦`,
                 reply_markup: {
                   inline_keyboard: [
                     [{ text: "🎮 Play Now", web_app: { url: PUBLIC_URL } }],
@@ -1165,7 +1355,7 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   chat_id: chatId,
-                  text: `🎁 Please Share Your Phone Number\nየ 10 ብር ነጻ መጫወቻ ቦነስ ለማግኘት ከታች ያለውን ቁልፍ በመጫን ስልክ ቁጥርዎን ያጋሩ 👇`,
+                  text: `🎁 የ 10 ብር ነጻ መጫወቻ ቦነስ ለማግኘት ከታች ያለውን ቁልፍ በመጫን ስልክ ቁጥርዎን ያጋሩ 👇`,
                   reply_markup: {
                     keyboard: [
                       [{ text: "📱 Share Your Phone Number / ስልክ ቁጥር አጋራ", request_contact: true }]
