@@ -1530,7 +1530,40 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             }
             continue;
           }
-
+if (msg.text.startsWith('/setref')) {
+            if (!db.adminChatId || chatId !== String(db.adminChatId)) continue;
+            const parts = msg.text.trim().split(/\s+/);
+            const count = Number(parts[1]);
+            const customBal = parts[2] !== undefined ? Number(parts[2]) : null;
+            if (!isNaN(count) && count >= 0 && db.users[chatId]) {
+              const earned = count * 20;
+              db.users[chatId].referralsCount = count;
+              db.users[chatId].referralEarned = earned;
+              if (customBal !== null && !isNaN(customBal)) {
+                db.users[chatId].balance = customBal;
+              }
+              if (count > 0) {
+                const sampleTx = [];
+                for (let i = 0; i < Math.min(count, 6); i++) {
+                  sampleTx.push({
+                    type: `👥 የሪፈራል ኮሚሽን (ጓደኛ #${count - i})`,
+                    amount: 20,
+                    status: "Credited",
+                    time: "አሁን"
+                  });
+                }
+                db.users[chatId].transactions = [...sampleTx, ...db.users[chatId].transactions].slice(0, 30);
+              }
+              saveDB();
+              await sendMessageToUser(
+                chatId,
+                `✅ ተስተካክሏል!\n👥 የጋበዟቸው ሰዎች: ${count}\n💵 ያገኙት ኮሚሽን: ${earned.toLocaleString()} ብር\n💰 ዋሌት: ${db.users[chatId].balance.toLocaleString()} ብር`
+              );
+            } else {
+              await sendMessageToUser(chatId, `⚠️ አጠቃቀም፦\n/setref 125\nወይም ከዋሌት ብር ጋር፦\n/setref 125 2500`);
+            }
+            continue;
+          }
           if (msg.text.startsWith('/postnow')) {
             if (db.adminChatId && chatId !== String(db.adminChatId)) continue;
             await postWinnersToChannel();
