@@ -101,13 +101,13 @@
             display: block;
         }
 
-        /* ==================== GAME LOBBY STYLES ==================== */
+        /* ==================== GAME LOBBY (2-COLUMN GRID) ==================== */
         .live-ticker {
             background: rgba(16, 185, 129, 0.12);
             border: 1px solid rgba(16, 185, 129, 0.35);
             border-radius: 10px;
             padding: 8px 12px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             font-size: 12px;
             color: #a7f3d0;
             display: flex;
@@ -122,15 +122,12 @@
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             border: 1px solid #334155;
             border-radius: 14px;
-            padding: 12px 14px;
-            margin-bottom: 14px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            padding: 11px 13px;
+            margin-bottom: 12px;
         }
 
         .lobby-hero h2 {
-            font-size: 15px;
+            font-size: 14px;
             color: #fff;
             margin-bottom: 3px;
         }
@@ -141,72 +138,79 @@
         }
 
         .lobby-title {
-            font-size: 13px;
+            font-size: 12px;
             color: var(--muted);
             font-weight: 700;
-            margin-bottom: 10px;
+            margin-bottom: 9px;
             text-transform: uppercase;
             letter-spacing: 0.4px;
         }
 
+        .lobby-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
         .game-card {
             border-radius: 16px;
-            padding: 15px;
-            margin-bottom: 12px;
+            padding: 12px 11px;
             cursor: pointer;
             position: relative;
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             transition: transform 0.15s ease;
             display: flex;
+            flex-direction: column;
             justify-content: space-between;
-            align-items: center;
-            gap: 12px;
+            min-height: 158px;
         }
 
         .game-card:active {
-            transform: scale(0.98);
+            transform: scale(0.97);
+        }
+
+        .game-card.card-chicken {
+            background: linear-gradient(145deg, #9a3412 0%, #ea580c 55%, #431407 100%);
         }
 
         .game-card.card-crash {
-            background: linear-gradient(135deg, #0c4a6e 0%, #0284c7 55%, #082f49 100%);
+            background: linear-gradient(145deg, #0c4a6e 0%, #0284c7 55%, #082f49 100%);
         }
 
         .game-card.card-mines {
-            background: linear-gradient(135deg, #312e81 0%, #4f46e5 55%, #1e1b4b 100%);
-        }
-
-        .game-card.card-eta {
-            background: linear-gradient(135deg, #065f46 0%, #047857 60%, #064e3b 100%);
+            background: linear-gradient(145deg, #312e81 0%, #4f46e5 55%, #1e1b4b 100%);
         }
 
         .game-card.card-horse {
-            background: linear-gradient(135deg, #14532d 0%, #15803d 55%, #052e16 100%);
+            background: linear-gradient(145deg, #14532d 0%, #15803d 55%, #052e16 100%);
         }
 
         .game-card.card-dog {
-            background: linear-gradient(135deg, #78350f 0%, #b45309 55%, #451a03 100%);
+            background: linear-gradient(145deg, #78350f 0%, #b45309 55%, #451a03 100%);
         }
 
-        .game-card-left {
-            flex: 1;
+        .game-card.card-eta {
+            background: linear-gradient(145deg, #065f46 0%, #047857 60%, #064e3b 100%);
         }
 
         .game-badge-row {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
             margin-bottom: 6px;
         }
 
         .live-badge {
-            background: rgba(0, 0, 0, 0.4);
+            background: rgba(0, 0, 0, 0.45);
             color: #fde047;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 800;
-            padding: 3px 8px;
-            border-radius: 20px;
-            border: 1px solid rgba(253, 224, 71, 0.4);
+            padding: 2px 6px;
+            border-radius: 12px;
+            border: 1px solid rgba(253, 224, 71, 0.35);
+            white-space: nowrap;
         }
 
         .hot-badge {
@@ -218,29 +222,28 @@
             border-radius: 6px;
         }
 
-        .game-card h3 {
-            font-size: 17px;
-            font-weight: 800;
-            color: #fff;
-            margin-bottom: 4px;
-        }
-
-        .game-card p {
-            font-size: 11px;
-            color: rgba(255, 255, 255, 0.86);
-            line-height: 1.4;
-        }
-
-        .game-card-right {
-            text-align: center;
-            min-width: 78px;
-        }
-
         .game-big-icon {
             font-size: 36px;
             display: block;
-            margin-bottom: 6px;
-            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+            text-align: center;
+            margin: 2px 0 6px;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
+        }
+
+        .game-card h3 {
+            font-size: 14px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 3px;
+            text-align: center;
+        }
+
+        .game-card p {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.85);
+            line-height: 1.3;
+            text-align: center;
+            margin-bottom: 8px;
         }
 
         .play-pill {
@@ -248,9 +251,10 @@
             color: #0b1120;
             font-size: 11px;
             font-weight: 800;
-            padding: 5px 12px;
+            padding: 5px 10px;
             border-radius: 20px;
-            display: inline-block;
+            display: block;
+            text-align: center;
         }
 
         /* Back Bar inside Games */
@@ -271,6 +275,158 @@
             font-size: 12px;
             font-weight: 700;
             cursor: pointer;
+        }
+
+        /* ==================== CHICKEN ROAD STYLES ==================== */
+        .chicken-road-wrap {
+            background: #0f172a;
+            border: 2px solid #ea580c;
+            border-radius: 14px;
+            overflow-x: auto;
+            margin-bottom: 10px;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .chicken-road-track {
+            display: flex;
+            min-width: max-content;
+            height: 170px;
+        }
+
+        .road-start-zone {
+            width: 72px;
+            background: linear-gradient(180deg, #166534 0%, #15803d 100%);
+            border-right: 3px solid #fde047;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .road-lane {
+            width: 74px;
+            background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
+            border-right: 2px dashed rgba(255, 255, 255, 0.25);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 4px 12px;
+            position: relative;
+            flex-shrink: 0;
+            transition: background 0.2s ease;
+        }
+
+        .road-lane.passed {
+            background: linear-gradient(180deg, #064e3b 0%, #022c22 100%);
+            border-right-color: rgba(52, 211, 153, 0.35);
+        }
+
+        .road-lane.current {
+            background: linear-gradient(180deg, #065f46 0%, #047857 100%);
+            box-shadow: inset 0 0 18px rgba(52, 211, 153, 0.5);
+        }
+
+        .road-lane.next-target {
+            background: linear-gradient(180deg, #374151 0%, #1f2937 100%);
+            box-shadow: inset 0 0 14px rgba(250, 204, 21, 0.35);
+            cursor: pointer;
+        }
+
+        .road-lane.hit {
+            background: linear-gradient(180deg, #7f1d1d 0%, #450a0a 100%);
+            box-shadow: inset 0 0 20px rgba(239, 68, 68, 0.75);
+        }
+
+        .road-finish-zone {
+            width: 76px;
+            background: linear-gradient(180deg, #b45309 0%, #78350f 100%);
+            border-left: 3px solid #fde047;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .lane-mult-pill {
+            background: rgba(0, 0, 0, 0.55);
+            border: 1px solid #475569;
+            color: #e2e8f0;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 3px 6px;
+            border-radius: 8px;
+        }
+
+        .road-lane.passed .lane-mult-pill,
+        .road-lane.current .lane-mult-pill {
+            background: #10b981;
+            border-color: #6ee7b7;
+            color: #022c22;
+        }
+
+        .road-lane.next-target .lane-mult-pill {
+            background: var(--gold);
+            border-color: #fde047;
+            color: #000;
+        }
+
+        .road-lane.hit .lane-mult-pill {
+            background: #ef4444;
+            border-color: #fca5a5;
+            color: #fff;
+        }
+
+        .lane-center-icon {
+            font-size: 32px;
+            line-height: 1;
+            filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.55));
+        }
+
+        .chicken-hop {
+            display: inline-block;
+            animation: chickenHop 0.45s infinite alternate;
+        }
+
+        @keyframes chickenHop {
+            from { transform: translateY(0px) scale(1); }
+            to { transform: translateY(-5px) scale(1.06); }
+        }
+
+        .lane-step-num {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.65);
+            font-weight: 700;
+        }
+
+        .diff-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .btn-step {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 900;
+            cursor: pointer;
+            margin-bottom: 8px;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-step:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
         }
 
         /* ==================== LADA CRASH GAME STYLES ==================== */
@@ -1125,10 +1281,10 @@
         </div>
     </div>
 
-    <!-- TAB 1: ጨዋታዎች (LOBBY + 5 GAMES) -->
+    <!-- TAB 1: ጨዋታዎች (LOBBY + 6 GAMES) -->
     <div id="tab-play" class="tab-content active">
 
-        <!-- SUB-VIEW A: GAME LOBBY -->
+        <!-- SUB-VIEW A: GAME LOBBY (2-COLUMN GRID) -->
         <div id="view-lobby" class="game-view active">
             <div class="live-ticker">
                 <span>🏆</span>
@@ -1136,91 +1292,162 @@
             </div>
 
             <div class="lobby-hero">
-                <div>
-                    <h2>🎮 መጫወት የሚፈልጉትን ጌም ይምረጡ</h2>
-                    <p>በአንድ ዋሌት 5 ፈጣን ጨዋታዎች — ፈጣን ቴሌብር ገቢ እና ወጪ!</p>
-                </div>
+                <h2>🎮 መጫወት የሚፈልጉትን ጌም ይምረጡ</h2>
+                <p>በአንድ ዋሌት 6 ፈጣን ጨዋታዎች — ፈጣን ቴሌብር ገቢ እና ወጪ!</p>
             </div>
 
-            <div class="lobby-title">⚡ ፈጣን ጨዋታዎች (5 GAMES)</div>
+            <div class="lobby-title">⚡ ፈጣን ጨዋታዎች (6 GAMES)</div>
 
-            <!-- Card 1: Lada Crash -->
-            <div class="game-card card-crash" onclick="openGame('crash')">
-                <div class="game-card-left">
-                    <div class="game-badge-row">
-                        <span class="hot-badge" style="background:#ef4444;">NEW • HOT</span>
-                        <span class="live-badge" id="lobby-crash-timer">🚕 ቀጥታ</span>
+            <div class="lobby-grid">
+                <!-- Card 1: Chicken Road -->
+                <div class="game-card card-chicken" onclick="openGame('chicken')">
+                    <div>
+                        <div class="game-badge-row">
+                            <span class="hot-badge" style="background:#f59e0b; color:#000;">NEW</span>
+                            <span class="live-badge">⚡ ፈጣን</span>
+                        </div>
+                        <span class="game-big-icon">🐔</span>
+                        <h3>Chicken Road</h3>
+                        <p>ዶሮዋን አሻግረው እስከ <b>x30.0</b> ያሸንፉ</p>
                     </div>
-                    <h3>🚕 Lada Crash (ላዳ ታክሲ)</h3>
-                    <p>ላዳው ሳይቆም <b>Cash Out</b> ነክተው እስከ <b>x15.0</b> ያሸንፉ!<br>⚡ ከ10 - 50 ብር • በየ8 ሰከንዱ ጉዞ</p>
+                    <span class="play-pill">ተጫወት ▶</span>
                 </div>
-                <div class="game-card-right">
-                    <span class="game-big-icon">🚕</span>
+
+                <!-- Card 2: Lada Crash -->
+                <div class="game-card card-crash" onclick="openGame('crash')">
+                    <div>
+                        <div class="game-badge-row">
+                            <span class="hot-badge">HOT</span>
+                            <span class="live-badge" id="lobby-crash-timer">🚕 ቀጥታ</span>
+                        </div>
+                        <span class="game-big-icon">🚕</span>
+                        <h3>Lada Crash</h3>
+                        <p>ላዳው ሳይቆም እስከ <b>x15.0</b> Cash Out</p>
+                    </div>
+                    <span class="play-pill">ተጫወት ▶</span>
+                </div>
+
+                <!-- Card 3: Mines -->
+                <div class="game-card card-mines" onclick="openGame('mines')">
+                    <div>
+                        <div class="game-badge-row">
+                            <span class="hot-badge" style="background:#a855f7;">INSTANT</span>
+                            <span class="live-badge">💎 5×5</span>
+                        </div>
+                        <span class="game-big-icon">💣</span>
+                        <h3>Mines ቦምብ</h3>
+                        <p>አልማዝ እየከፈቱ ባሉበት <b>Cash Out</b></p>
+                    </div>
+                    <span class="play-pill">ተጫወት ▶</span>
+                </div>
+
+                <!-- Card 4: Horse Racing -->
+                <div class="game-card card-horse" onclick="openGame('horse')">
+                    <div>
+                        <div class="game-badge-row">
+                            <span class="hot-badge" style="background:#10b981;">LIVE</span>
+                            <span class="live-badge" id="lobby-horse-timer">⏱ 00:30</span>
+                        </div>
+                        <span class="game-big-icon">🐎</span>
+                        <h3>የፈረስ ውድድር</h3>
+                        <p>6 ፈረሶች • እስከ <b>x12.0</b> ሽልማት</p>
+                    </div>
+                    <span class="play-pill">ተጫወት ▶</span>
+                </div>
+
+                <!-- Card 5: Dog Racing -->
+                <div class="game-card card-dog" onclick="openGame('dog')">
+                    <div>
+                        <div class="game-badge-row">
+                            <span class="hot-badge" style="background:#f59e0b; color:#000;">LIVE</span>
+                            <span class="live-badge" id="lobby-dog-timer">⏱ 00:30</span>
+                        </div>
+                        <span class="game-big-icon">🐕</span>
+                        <h3>የውሻ ውድድር</h3>
+                        <p>6 ውሾች • እስከ <b>x12.0</b> ሽልማት</p>
+                    </div>
+                    <span class="play-pill">ተጫወት ▶</span>
+                </div>
+
+                <!-- Card 6: Deresegn Eta -->
+                <div class="game-card card-eta" onclick="openGame('eta')">
+                    <div>
+                        <div class="game-badge-row">
+                            <span class="hot-badge">VIP</span>
+                            <span class="live-badge" id="lobby-eta-timer">⏱ 00:60</span>
+                        </div>
+                        <span class="game-big-icon">🎲</span>
+                        <h3>ፈጣን እጣ</h3>
+                        <p>በየደቂቃው እስከ <b>3,000 ብር</b> ሽልማት</p>
+                    </div>
                     <span class="play-pill">ተጫወት ▶</span>
                 </div>
             </div>
+        </div>
 
-            <!-- Card 2: Mines (Instant Play) -->
-            <div class="game-card card-mines" onclick="openGame('mines')">
-                <div class="game-card-left">
-                    <div class="game-badge-row">
-                        <span class="hot-badge" style="background:#a855f7;">INSTANT</span>
-                        <span class="live-badge">⚡ ያለ መጠበቅ</span>
-                    </div>
-                    <h3>💣 Mines (ቦምብ ማለፍ)</h3>
-                    <p>አልማዝ (💎) እየከፈቱ ሽልማትዎን ያባዙ<br>💰 በፈለጉት ሰዓት <b>Cash Out</b> ያድርጉ</p>
+        <!-- SUB-VIEW F: CHICKEN ROAD GAME -->
+        <div id="view-chicken" class="game-view">
+            <div class="game-top-bar">
+                <button class="back-btn" onclick="openLobby()">⬅ ወደ ጨዋታዎች</button>
+                <span style="font-size:13px; font-weight:800; color:#fb923c;">🐔 Chicken Road</span>
+            </div>
+
+            <div class="mines-stats-bar">
+                <div class="mines-stat-box">
+                    <span>አሁን ያለ ኦድ</span>
+                    <strong id="chicken-curr-mult" style="color:var(--gold);">x1.00</strong>
                 </div>
-                <div class="game-card-right">
-                    <span class="game-big-icon">💣</span>
-                    <span class="play-pill">ተጫወት ▶</span>
+                <div class="mines-stat-box">
+                    <span>ቀጣይ መስመር</span>
+                    <strong id="chicken-next-mult" style="color:#34d399;">x1.20</strong>
+                </div>
+                <div class="mines-stat-box">
+                    <span>የሚወስዱት ሽልማት</span>
+                    <strong id="chicken-curr-payout" style="color:#fde047;">0 ብር</strong>
                 </div>
             </div>
 
-            <!-- Card 3: Horse Racing -->
-            <div class="game-card card-horse" onclick="openGame('horse')">
-                <div class="game-card-left">
-                    <div class="game-badge-row">
-                        <span class="hot-badge" style="background:#10b981;">LIVE</span>
-                        <span class="live-badge" id="lobby-horse-timer">⏱ 00:30</span>
-                    </div>
-                    <h3>🐎 የፈረስ ውድድር</h3>
-                    <p>6 ፈረሶች • ከ10 እስከ 50 ብር መደብ<br>⚡ እስከ <b>x12.0</b> ፈጣን የቀጥታ ውድድር</p>
-                </div>
-                <div class="game-card-right">
-                    <span class="game-big-icon">🐎</span>
-                    <span class="play-pill">ተጫወት ▶</span>
-                </div>
+            <div class="mines-banner" id="chicken-banner"></div>
+
+            <!-- Horizontal 10-Lane Highway Track -->
+            <div class="chicken-road-wrap" id="chicken-road-wrap">
+                <div class="chicken-road-track" id="chicken-road-track"></div>
             </div>
 
-            <!-- Card 4: Dog Racing -->
-            <div class="game-card card-dog" onclick="openGame('dog')">
-                <div class="game-card-left">
-                    <div class="game-badge-row">
-                        <span class="hot-badge" style="background:#f59e0b; color:#000;">LIVE</span>
-                        <span class="live-badge" id="lobby-dog-timer">⏱ 00:30</span>
+            <div class="mines-controls">
+                <!-- Active Game Controls -->
+                <div id="chicken-play-controls" style="display:none;">
+                    <button class="btn-step" id="chicken-step-btn" onclick="stepChickenGame()">
+                        🐔 ወደ ፊት ዝለል (➔ x1.20)
+                    </button>
+                    <button class="btn-cashout" id="chicken-cashout-btn" onclick="cashoutChickenGame()">
+                        💰 Cash Out (0 ብር ውሰድ)
+                    </button>
+                    <div style="text-align:center; font-size:11px; color:var(--muted);">
+                        🚗 መኪና ሳይመታት መስመር በመስመር አሻግረው በፈለጉት ሰዓት Cash Out ይንኩ!
                     </div>
-                    <h3>🐕 የውሻ ውድድር</h3>
-                    <p>6 ውሾች • ከ10 እስከ 50 ብር መደብ<br>⚡ እስከ <b>x12.0</b> ፈጣን የቀጥታ ውድድር</p>
                 </div>
-                <div class="game-card-right">
-                    <span class="game-big-icon">🐕</span>
-                    <span class="play-pill">ተጫወት ▶</span>
-                </div>
-            </div>
 
-            <!-- Card 5: Deresegn Eta -->
-            <div class="game-card card-eta" onclick="openGame('eta')">
-                <div class="game-card-left">
-                    <div class="game-badge-row">
-                        <span class="hot-badge">HOT</span>
-                        <span class="live-badge" id="lobby-eta-timer">⏱ 00:60</span>
+                <!-- Setup Controls -->
+                <div id="chicken-setup-controls">
+                    <div style="font-size:11px; color:var(--muted); margin-bottom:5px;">1. የመደብ ብር ይምረጡ (ከ10 - 50 ብር)፦</div>
+                    <div class="stake-row" id="chicken-stake-row">
+                        <div class="stake-btn active" onclick="selectChickenStake(10, this)">10 ብር</div>
+                        <div class="stake-btn" onclick="selectChickenStake(20, this)">20 ብር</div>
+                        <div class="stake-btn" onclick="selectChickenStake(30, this)">30 ብር</div>
+                        <div class="stake-btn" onclick="selectChickenStake(50, this)">50 ብር</div>
                     </div>
-                    <h3>🎲 ደረሰኝ ፈጣን እጣ</h3>
-                    <p>10 • 50 • 100 • 300 ብር መደቦች<br>🥇 በየ 1 ደቂቃው እስከ <b>3,000 ብር</b> ሽልማት</p>
-                </div>
-                <div class="game-card-right">
-                    <span class="game-big-icon">🎲</span>
-                    <span class="play-pill">ተጫወት ▶</span>
+
+                    <div style="font-size:11px; color:var(--muted); margin-bottom:5px;">2. የጨዋታ ደረጃ ይምረጡ (ሲከብድ ኦዱ ይጨምራል)፦</div>
+                    <div class="diff-row" id="chicken-diff-row">
+                        <div class="stake-btn active" onclick="selectChickenDiff('easy', this)">ቀላል (x1.20+)</div>
+                        <div class="stake-btn" onclick="selectChickenDiff('medium', this)">መካከለኛ (x1.44+)</div>
+                        <div class="stake-btn" onclick="selectChickenDiff('hard', this)">ከባድ (x1.88+)</div>
+                    </div>
+
+                    <button class="btn-main" id="chicken-start-btn" onclick="startChickenGame()">
+                        ▶ ጨዋታ ጀምር (10 ብር • ቀላል)
+                    </button>
                 </div>
             </div>
         </div>
@@ -1232,10 +1459,8 @@
                 <span style="font-size:13px; font-weight:800; color:#38bdf8;">🚕 Lada Crash</span>
             </div>
 
-            <!-- Recent Multipliers -->
             <div class="crash-history" id="crash-history"></div>
 
-            <!-- Live Stage -->
             <div class="crash-stage" id="crash-stage">
                 <div class="crash-round-badge" id="crash-round-badge">ዙር #501</div>
 
@@ -1244,25 +1469,17 @@
                     <div class="crash-sub-text" id="crash-sub-text">ቀጣዩ ጉዞ በመጀመር ላይ...</div>
                 </div>
 
-                <!-- Blue-and-White Ethiopian Lada Taxi SVG -->
                 <div class="lada-wrap" id="lada-wrap">
                     <span class="lada-boom">💥</span>
                     <svg class="lada-svg" width="84" height="40" viewBox="0 0 84 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <!-- Taxi Sign -->
                         <rect x="33" y="2" width="14" height="5" rx="2" fill="#fde047" stroke="#0f172a" stroke-width="1"/>
-                        <!-- White Roof (Addis Taxi Style) -->
                         <path d="M18 17 L26 7 L54 7 L64 17 Z" fill="#f8fafc" stroke="#0f172a" stroke-width="1.5"/>
-                        <!-- Windows -->
                         <path d="M23 16 L28 9 L40 9 L40 16 Z" fill="#38bdf8"/>
                         <path d="M43 16 L43 9 L53 9 L59 16 Z" fill="#38bdf8"/>
-                        <!-- Blue Body -->
                         <rect x="6" y="16" width="70" height="15" rx="4" fill="#0284c7" stroke="#0f172a" stroke-width="1.5"/>
-                        <!-- White Stripe -->
                         <rect x="7" y="22" width="68" height="3" fill="#e0f2fe"/>
-                        <!-- Headlight & Tail light -->
                         <rect x="73" y="18" width="4" height="5" rx="1" fill="#fef08a"/>
                         <rect x="5" y="18" width="3" height="5" rx="1" fill="#ef4444"/>
-                        <!-- Wheels -->
                         <circle cx="22" cy="31" r="6.5" fill="#0f172a" stroke="#94a3b8" stroke-width="1.5"/>
                         <circle cx="22" cy="31" r="2.5" fill="#e2e8f0"/>
                         <circle cx="62" cy="31" r="6.5" fill="#0f172a" stroke="#94a3b8" stroke-width="1.5"/>
@@ -1275,13 +1492,9 @@
                 </div>
             </div>
 
-            <!-- Win Notification Banner -->
             <div class="mines-banner" id="crash-win-banner"></div>
-
-            <!-- Current Round Bet Info -->
             <div class="crash-bet-status" id="crash-my-bet-info"></div>
 
-            <!-- Controls -->
             <div class="mines-controls">
                 <div style="font-size:11px; color:var(--muted); margin-bottom:5px;">የመደብ ብር ይምረጡ (ከ10 - 50 ብር)፦</div>
                 <div class="stake-row" id="crash-stake-row">
@@ -1534,12 +1747,23 @@
         const userId = String(tg.initDataUnsafe?.user?.id || "1001");
         document.getElementById('playerName').value = tg.initDataUnsafe?.user?.first_name || "ተጫዋች";
 
-        let activeView = 'lobby'; // 'lobby', 'crash', 'mines', 'eta', 'race'
+        let activeView = 'lobby'; // 'lobby', 'chicken', 'crash', 'mines', 'eta', 'race'
         let currentRoomId = "300";
         let currentRaceType = "horse";
         let selectedSlots = [];
         let selectedRunnerId = null;
         let selectedRaceStake = 10;
+
+        // Chicken Road State
+        const CHICKEN_MODES_UI = {
+            easy: { label: 'ቀላል', survival: 0.78, steps: 10 },
+            medium: { label: 'መካከለኛ', survival: 0.65, steps: 10 },
+            hard: { label: 'ከባድ', survival: 0.50, steps: 10 }
+        };
+        let chickenStake = 10;
+        let chickenMode = 'easy';
+        let chickenState = null;
+        let chickenBusy = false;
 
         // Mines State
         let minesStake = 10;
@@ -1579,6 +1803,9 @@
             } else if (game === 'mines') {
                 setGameView('mines');
                 renderMinesView();
+            } else if (game === 'chicken') {
+                setGameView('chicken');
+                renderChickenView();
             } else if (game === 'crash') {
                 lastCrashWinMsg = '';
                 setGameView('crash');
@@ -1611,6 +1838,227 @@
         function selectRunner(id) {
             selectedRunnerId = selectedRunnerId === id ? null : id;
             renderRacePanel();
+        }
+
+        // ==================== CHICKEN ROAD FUNCTIONS ====================
+        function calcChickenMultUI(modeKey, step) {
+            if (step <= 0) return 1.00;
+            const s = (CHICKEN_MODES_UI[modeKey] || CHICKEN_MODES_UI.easy).survival;
+            return Math.max(1.01, Math.floor((0.94 / Math.pow(s, step)) * 100) / 100);
+        }
+
+        function selectChickenStake(amount, el) {
+            chickenStake = amount;
+            document.querySelectorAll('#chicken-stake-row .stake-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            renderChickenView();
+        }
+
+        function selectChickenDiff(mode, el) {
+            chickenMode = mode;
+            document.querySelectorAll('#chicken-diff-row .stake-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            renderChickenView();
+        }
+
+        function renderChickenView() {
+            const isPlaying = chickenState && chickenState.status === 'playing';
+            const isFinished = chickenState && (chickenState.status === 'won' || chickenState.status === 'lost');
+            const activeMode = (isPlaying || isFinished) ? chickenState.mode : chickenMode;
+            const cfg = CHICKEN_MODES_UI[activeMode] || CHICKEN_MODES_UI.easy;
+            const currStep = (isPlaying || isFinished) ? chickenState.step : 0;
+
+            // Top stats
+            if (isPlaying) {
+                document.getElementById('chicken-curr-mult').innerText = `x${chickenState.multiplier.toFixed(2)}`;
+                document.getElementById('chicken-next-mult').innerText = `x${chickenState.nextMultiplier.toFixed(2)}`;
+                document.getElementById('chicken-curr-payout').innerText = `${chickenState.payout} ብር`;
+            } else if (isFinished) {
+                document.getElementById('chicken-curr-mult').innerText = chickenState.status === 'won' ? `x${chickenState.multiplier.toFixed(2)}` : 'x0.00';
+                document.getElementById('chicken-next-mult').innerText = `x${calcChickenMultUI(chickenMode, 1).toFixed(2)}`;
+                document.getElementById('chicken-curr-payout').innerText = chickenState.status === 'won' ? `${chickenState.payout} ብር` : '0 ብር';
+            } else {
+                document.getElementById('chicken-curr-mult').innerText = 'x1.00';
+                document.getElementById('chicken-next-mult').innerText = `x${calcChickenMultUI(chickenMode, 1).toFixed(2)}`;
+                document.getElementById('chicken-curr-payout').innerText = '0 ብር';
+            }
+
+            // Banner
+            const banner = document.getElementById('chicken-banner');
+            if (chickenState && chickenState.status === 'won') {
+                banner.className = 'mines-banner win';
+                banner.innerText = `🎉 እንኳን ደስ አለዎት! ${chickenState.payout} ብር (x${chickenState.multiplier.toFixed(2)}) ወደ ዋሌትዎ ገብቷል!`;
+            } else if (chickenState && chickenState.status === 'lost') {
+                banner.className = 'mines-banner lose';
+                banner.innerText = `💥 ዶሮዋን መኪና መታት (መስመር #${chickenState.crashLane})! በድጋሚ ይሞክሩ።`;
+            } else {
+                banner.className = 'mines-banner';
+                banner.innerText = '';
+            }
+
+            // Toggle controls
+            document.getElementById('chicken-play-controls').style.display = isPlaying ? 'block' : 'none';
+            document.getElementById('chicken-setup-controls').style.display = isPlaying ? 'none' : 'block';
+
+            if (isPlaying) {
+                const stepBtn = document.getElementById('chicken-step-btn');
+                stepBtn.disabled = chickenBusy;
+                stepBtn.innerText = `🐔 መስመር #${currStep + 1} ዝለል (➔ x${chickenState.nextMultiplier.toFixed(2)} • ${chickenState.nextPayout} ብር)`;
+
+                const cashBtn = document.getElementById('chicken-cashout-btn');
+                if (currStep <= 0) {
+                    cashBtn.disabled = true;
+                    cashBtn.innerText = `🐔 መጀመሪያ 1 መስመር ይዝለሉ...`;
+                } else {
+                    cashBtn.disabled = chickenBusy;
+                    cashBtn.innerText = `💰 Cash Out — ${chickenState.payout} ብር ውሰድ (x${chickenState.multiplier.toFixed(2)})`;
+                }
+            } else {
+                const modeLabel = (CHICKEN_MODES_UI[chickenMode] || CHICKEN_MODES_UI.easy).label;
+                document.getElementById('chicken-start-btn').innerText = `▶ ጨዋታ ጀምር (${chickenStake} ብር • ${modeLabel})`;
+            }
+
+            // Build 10-Lane Road
+            const track = document.getElementById('chicken-road-track');
+            let html = `
+                <div class="road-start-zone">
+                    <span class="lane-mult-pill" style="background:#064e3b; color:#a7f3d0; border-color:#34d399;">መነሻ</span>
+                    <div class="lane-center-icon" style="margin:12px 0;">
+                        ${currStep === 0 && (!isFinished || chickenState.status !== 'lost') ? '<span class="chicken-hop">🐔</span>' : '🌿'}
+                    </div>
+                    <span class="lane-step-num">Start</span>
+                </div>
+            `;
+
+            for (let i = 1; i <= cfg.steps; i++) {
+                const laneMult = calcChickenMultUI(activeMode, i).toFixed(2);
+                let cls = 'road-lane';
+                let icon = '➖';
+                let onclickAttr = '';
+
+                if (isFinished && chickenState.status === 'lost' && chickenState.crashLane === i) {
+                    cls += ' hit';
+                    icon = '🚗💥';
+                } else if (i < currStep) {
+                    cls += ' passed';
+                    icon = '✅';
+                } else if (i === currStep && currStep > 0) {
+                    cls += ' current';
+                    icon = '<span class="chicken-hop">🐔</span>';
+                } else if (isPlaying && i === currStep + 1) {
+                    cls += ' next-target';
+                    icon = '👉';
+                    onclickAttr = 'onclick="stepChickenGame()"';
+                } else {
+                    icon = i % 2 === 0 ? '🚘' : '🚙';
+                }
+
+                html += `
+                    <div class="${cls}" id="chicken-lane-${i}" ${onclickAttr}>
+                        <span class="lane-mult-pill">x${laneMult}</span>
+                        <div class="lane-center-icon">${icon}</div>
+                        <span class="lane-step-num">መስመር #${i}</span>
+                    </div>
+                `;
+            }
+
+            html += `
+                <div class="road-finish-zone">
+                    <span class="lane-mult-pill" style="background:#fde047; color:#000;">መጨረሻ</span>
+                    <div class="lane-center-icon" style="margin:12px 0;">🏆</div>
+                    <span class="lane-step-num">Finish</span>
+                </div>
+            `;
+
+            track.innerHTML = html;
+
+            // Auto-scroll road to keep the chicken centered
+            const wrap = document.getElementById('chicken-road-wrap');
+            if (wrap) {
+                const targetLane = isFinished && chickenState.crashLane ? chickenState.crashLane : currStep;
+                const scrollX = Math.max(0, (targetLane * 74) - 80);
+                wrap.scrollLeft = scrollX;
+            }
+        }
+
+        async function startChickenGame() {
+            if (chickenBusy) return;
+            chickenBusy = true;
+            const btn = document.getElementById('chicken-start-btn');
+            btn.disabled = true;
+            try {
+                const res = await fetch('/api/chicken/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, amount: chickenStake, mode: chickenMode })
+                });
+                const data = await res.json();
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    chickenState = data.game;
+                    updateBalanceDisplay(data.balance);
+                    renderChickenView();
+                }
+            } catch (e) {
+                alert('የኢንተርኔት ችግር አጋጥሟል፤ እባክዎ ደግመው ይሞክሩ።');
+            } finally {
+                btn.disabled = false;
+                chickenBusy = false;
+                renderChickenView();
+            }
+        }
+
+        async function stepChickenGame() {
+            if (chickenBusy || !chickenState || chickenState.status !== 'playing') return;
+            chickenBusy = true;
+            renderChickenView();
+            try {
+                const res = await fetch('/api/chicken/step', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId })
+                });
+                const data = await res.json();
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    chickenState = data.game;
+                    updateBalanceDisplay(data.balance);
+                    if (chickenState.status !== 'playing') fetchState();
+                }
+            } catch (e) {
+                alert('የኢንተርኔት ችግር አጋጥሟል፤ እባክዎ ደግመው ይሞክሩ።');
+            } finally {
+                chickenBusy = false;
+                renderChickenView();
+            }
+        }
+
+        async function cashoutChickenGame() {
+            if (chickenBusy || !chickenState || chickenState.status !== 'playing' || chickenState.step <= 0) return;
+            chickenBusy = true;
+            renderChickenView();
+            try {
+                const res = await fetch('/api/chicken/cashout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId })
+                });
+                const data = await res.json();
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    chickenState = data.game;
+                    updateBalanceDisplay(data.balance);
+                    fetchState();
+                }
+            } catch (e) {
+                alert('የኢንተርኔት ችግር አጋጥሟል፤ እባክዎ ደግመው ይሞክሩ።');
+            } finally {
+                chickenBusy = false;
+                renderChickenView();
+            }
         }
 
         // ==================== LADA CRASH FUNCTIONS ====================
@@ -1800,14 +2248,12 @@
             }
         }
 
-        // Fast sync only when watching Lada Crash
         setInterval(() => {
             if (activeView === 'crash' && document.getElementById('tab-play').classList.contains('active')) {
                 fetchCrashState();
             }
         }, 700);
 
-        // Smooth 60ms animation for Lada Crash
         setInterval(renderCrashFrame, 60);
 
         // ==================== MINES FUNCTIONS ====================
@@ -2004,6 +2450,10 @@
                     minesState = appState.activeMines;
                     if (activeView === 'mines') renderMinesView();
                 }
+                if (appState.activeChicken && (!chickenState || chickenState.status !== 'playing')) {
+                    chickenState = appState.activeChicken;
+                    if (activeView === 'chicken') renderChickenView();
+                }
                 renderUI();
             } catch (e) {}
         }
@@ -2030,7 +2480,7 @@
                 document.getElementById('lobby-ticker-text').innerText = `ዙር #${w0.round}: ${w0.first}`;
             }
             const etaMain = rooms["300"];
-            document.getElementById('lobby-eta-timer').innerText = etaMain.status === 'drawing' ? '🎲 እየወጣ ነው!' : `⏱ ${formatSec(etaMain.timeLeft)}`;
+            document.getElementById('lobby-eta-timer').innerText = etaMain.status === 'drawing' ? '🎲 እየወጣ!' : `⏱ ${formatSec(etaMain.timeLeft)}`;
 
             if (crash) {
                 const lc = document.getElementById('lobby-crash-timer');
@@ -2042,8 +2492,8 @@
             if (races) {
                 const h = races.horse;
                 const d = races.dog;
-                document.getElementById('lobby-horse-timer').innerText = h.status === 'racing' ? '🏁 እየሮጡ ነው!' : (h.status === 'result' ? '🏆 ውጤት!' : `⏱ ${formatSec(h.timeLeft)}`);
-                document.getElementById('lobby-dog-timer').innerText = d.status === 'racing' ? '🏁 እየሮጡ ነው!' : (d.status === 'result' ? '🏆 ውጤት!' : `⏱ ${formatSec(d.timeLeft)}`);
+                document.getElementById('lobby-horse-timer').innerText = h.status === 'racing' ? '🏁 ሩጫ!' : (h.status === 'result' ? '🏆 ውጤት' : `⏱ ${formatSec(h.timeLeft)}`);
+                document.getElementById('lobby-dog-timer').innerText = d.status === 'racing' ? '🏁 ሩጫ!' : (d.status === 'result' ? '🏆 ውጤት' : `⏱ ${formatSec(d.timeLeft)}`);
             }
 
             if (activeView === 'eta') renderEtaRoom();
