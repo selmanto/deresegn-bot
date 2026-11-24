@@ -1,4 +1,3 @@
-
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
@@ -20,7 +19,11 @@ const MAX_MINES_PAYOUT = 600;
 
 const MIN_CRASH_BET = 10;
 const MAX_CRASH_BET = 50;
-const MAX_CRASH_PAYOUT = 600; // በአንድ የ Lada Crash ዙር የሚከፈል ከፍተኛ ሽልማት
+const MAX_CRASH_PAYOUT = 600;
+
+const MIN_CHICKEN_BET = 10;
+const MAX_CHICKEN_BET = 50;
+const MAX_CHICKEN_PAYOUT = 600; // በአንድ የ Chicken Road ዙር የሚከፈል ከፍተኛ ሽልማት
 
 const app = express();
 app.use(cors());
@@ -392,11 +395,11 @@ function serializeMinesForUser(game, revealBombs = false, hitTile = null) {
 }
 
 // ==================== 4. LADA CRASH GAME (LIVE MULTIPLIER) ====================
-const CRASH_GROWTH_RATE = 0.085; // ~8.1 ሰከንድ ላይ x2.00፣ ~18.9 ሰከንድ ላይ x5.00
+const CRASH_GROWTH_RATE = 0.085;
 
 function generateCrashPoint() {
   const r = Math.random();
-  const raw = 0.94 / (1 - r); // 94% RTP (6% House Edge)
+  const raw = 0.94 / (1 - r);
   if (raw < 1.01) return 1.00;
   return Math.min(15.00, Math.floor(raw * 100) / 100);
 }
@@ -408,12 +411,12 @@ function calcCrashMultiplier(elapsedMs) {
 
 let crashGame = {
   round: 501,
-  status: 'waiting', // 'waiting' (8s) -> 'driving' -> 'crashed' (4s)
+  status: 'waiting',
   phaseStartTime: Date.now(),
   phaseDuration: 8000,
   crashPoint: 1.00,
   crashDurationMs: 0,
-  bets: {}, // { [userId]: { amount, cashedOut, cashoutMult, payout } }
+  bets: {},
   history: [
     { round: 500, crashPoint: 2.34 },
     { round: 499, crashPoint: 1.18 },
@@ -424,7 +427,6 @@ let crashGame = {
   ]
 };
 
-// Fast 100ms loop for Lada Crash precision
 setInterval(() => {
   const now = Date.now();
   const elapsed = now - crashGame.phaseStartTime;
@@ -480,6 +482,52 @@ function serializeCrashForUser(userId) {
     minBet: MIN_CRASH_BET,
     maxBet: MAX_CRASH_BET,
     maxPayout: MAX_CRASH_PAYOUT
+  };
+}
+
+// ==================== 5. CHICKEN ROAD GAME (10 LANES INSTANT PLAY) ====================
+const CHICKEN_MODES = {
+  easy: { label: 'ቀላል', survival: 0.78, steps: 10 },
+  medium: { label: 'መካከለኛ', survival: 0.65, steps: 10 },
+  hard: { label: 'ከባድ', survival: 0.50, steps: 10 }
+};
+
+let activeChickenGames = {}; // { [userId]: { amount, mode, step, status, crashLane } }
+
+function calcChickenMultiplier(modeKey, step) {
+  if (step <= 0) return 1.00;
+  const cfg = CHICKEN_MODES[modeKey] || CHICKEN_MODES.easy;
+  const raw = 0.94 / Math.pow(cfg.survival, step); // 94% RTP (6% House Edge)
+  return Math.max(1.01, Math.floor(raw * 100) / 100);
+}
+
+function calcChickenPayout(amount, modeKey, step) {
+  if (step <= 0) return 0;
+  const mult = calcChickenMultiplier(modeKey, step);
+  return Math.min(MAX_CHICKEN_PAYOUT, Math.round(amount * mult));
+}
+
+function serializeChickenForUser(game) {
+  if (!game) return null;
+  const cfg = CHICKEN_MODES[game.mode] || CHICKEN_MODES.easy;
+  const mult = calcChickenMultiplier(game.mode, game.step);
+  const nextStep = Math.min(cfg.steps, game.step + 1);
+  const nextMult = calcChickenMultiplier(game.mode, nextStep);
+  const payout = calcChickenPayout(game.amount, game.mode, game.step);
+  const nextPayout = calcChickenPayout(game.amount, game.mode, nextStep);
+  return {
+    status: game.status,
+    amount: game.amount,
+    mode: game.mode,
+    modeLabel: cfg.label,
+    step: game.step,
+    maxSteps: cfg.steps,
+    crashLane: game.crashLane || null,
+    multiplier: mult,
+    nextMultiplier: nextMult,
+    payout,
+    nextPayout,
+    maxPayout: MAX_CHICKEN_PAYOUT
   };
 }
 
@@ -588,12 +636,147 @@ app.get('/api/state', (req, res) => {
     races: serializeRacesForUser(userId),
     crash: serializeCrashForUser(userId),
     activeMines: activeMinesGames[userId] ? serializeMinesForUser(activeMinesGames[userId], false) : null,
+    activeChicken: activeChickenGames[userId] ? serializeChickenForUser(activeChickenGames[userId]) : null,
     winnersHistory: db.winnersHistory,
     botUsername
   });
 });
 
-// Lightweight Crash Poll Endpoint (Very Low Bandwidth)
+// ==================== CHICKEN ROAD API ENDPOINTS ====================
+app.post('/api/chicken/start', (req, res) => {
+  const { userId = "1001", amount, mode = "easy" } = req.body;
+  const uid = String(userId);
+  const user = db.users[uid];
+  const numAmount = Math.floor(Number(amount));
+  const modeKey = CHICKEN_MODES[mode] ? mode : 'easy';
+
+  if (!user) return res.status(400).json({ error: "ተጫዋች አልተገኘም!" });
+  if (activeChickenGames[uid]) {
+    return res.json({ success: true, balance: user.balance, game: serializeChickenForUser(activeChickenGames[uid]) });
+  }
+  if (!numAmount || numAmount < MIN_CHICKEN_BET || numAmount > MAX_CHICKEN_BET) {
+    return res.status(400).json({ error: `መደቡ ከ ${MIN_CHICKEN_BET} እስከ ${MAX_CHICKEN_BET} ብር መሆን አለበት!` });
+  }
+  if (user.balance < numAmount) {
+    return res.status(400).json({ error: `በቂ ቀሪ ሂሳብ የለም! (${numAmount} ብር ያስፈልጋል)` });
+  }
+
+  user.balance -= numAmount;
+  user.transactions.unshift({
+    type: `🐔 Chicken Road መደብ (${CHICKEN_MODES[modeKey].label})`,
+    amount: -numAmount,
+    time: "አሁን"
+  });
+
+  const { d } = getTodayStats();
+  d.bets += numAmount;
+  db.stats.totalBets += numAmount;
+  saveDB();
+
+  activeChickenGames[uid] = {
+    amount: numAmount,
+    mode: modeKey,
+    step: 0,
+    status: 'playing',
+    crashLane: null
+  };
+
+  res.json({
+    success: true,
+    balance: user.balance,
+    game: serializeChickenForUser(activeChickenGames[uid])
+  });
+});
+
+app.post('/api/chicken/step', (req, res) => {
+  const { userId = "1001" } = req.body;
+  const uid = String(userId);
+  const user = db.users[uid];
+  const game = activeChickenGames[uid];
+
+  if (!user || !game || game.status !== 'playing') {
+    return res.status(400).json({ error: "ንቁ የ Chicken Road ጨዋታ የለም! መጀመሪያ ጨዋታ ጀምር ይጫኑ።" });
+  }
+
+  const cfg = CHICKEN_MODES[game.mode];
+  const targetStep = game.step + 1;
+  const survived = Math.random() < cfg.survival;
+
+  if (!survived) {
+    game.status = 'lost';
+    game.crashLane = targetStep;
+    const finished = serializeChickenForUser(game);
+    delete activeChickenGames[uid];
+    return res.json({ success: true, balance: user.balance, game: finished });
+  }
+
+  game.step = targetStep;
+  const payout = calcChickenPayout(game.amount, game.mode, game.step);
+
+  if (game.step >= cfg.steps || payout >= MAX_CHICKEN_PAYOUT) {
+    game.status = 'won';
+    const mult = calcChickenMultiplier(game.mode, game.step);
+    user.balance += payout;
+    user.transactions.unshift({
+      type: `🐔 Chicken Road ሽልማት (መስመር #${game.step} • x${mult})`,
+      amount: payout,
+      status: 'Credited',
+      time: "አሁን"
+    });
+    const { d } = getTodayStats();
+    d.wins += payout;
+    db.stats.totalWins += payout;
+    saveDB();
+
+    const finished = serializeChickenForUser(game);
+    delete activeChickenGames[uid];
+    return res.json({ success: true, balance: user.balance, game: finished });
+  }
+
+  res.json({
+    success: true,
+    balance: user.balance,
+    game: serializeChickenForUser(game)
+  });
+});
+
+app.post('/api/chicken/cashout', (req, res) => {
+  const { userId = "1001" } = req.body;
+  const uid = String(userId);
+  const user = db.users[uid];
+  const game = activeChickenGames[uid];
+
+  if (!user || !game || game.status !== 'playing') {
+    return res.status(400).json({ error: "ንቁ ጨዋታ የለም!" });
+  }
+  if (game.step <= 0) {
+    return res.status(400).json({ error: "Cash Out ለማድረግ ቢያንስ 1 መስመር ይዝለሉ!" });
+  }
+
+  const payout = calcChickenPayout(game.amount, game.mode, game.step);
+  const mult = calcChickenMultiplier(game.mode, game.step);
+  game.status = 'won';
+
+  user.balance += payout;
+  user.transactions.unshift({
+    type: `🐔 Chicken Road ሽልማት (መስመር #${game.step} • x${mult})`,
+    amount: payout,
+    status: 'Credited',
+    time: "አሁን"
+  });
+
+  const { d } = getTodayStats();
+  d.wins += payout;
+  db.stats.totalWins += payout;
+  saveDB();
+
+  const finished = serializeChickenForUser(game);
+  delete activeChickenGames[uid];
+
+  res.json({ success: true, balance: user.balance, game: finished });
+});
+
+// ==================== CRASH API ENDPOINTS ====================
 app.get('/api/crash/state', (req, res) => {
   const userId = String(req.query.userId || "1001");
   const user = db.users[userId];
@@ -684,6 +867,7 @@ app.post('/api/crash/cashout', (req, res) => {
   res.json({ success: true, balance: user.balance, payout, mult, crash: serializeCrashForUser(uid) });
 });
 
+// ==================== ETA & RACE ENDPOINTS ====================
 app.post('/api/buy', (req, res) => {
   const { userId = "1001", roomId, numbers, playerName } = req.body;
   const uid = String(userId);
@@ -1087,7 +1271,7 @@ async function postWinnersToChannel() {
 
   const postText = 
     `🎉 የደረሰኝ ጌም — የሰዓቱ አሸናፊዎች! 🎉\n\n` +
-    `በአዲሱ 🚕 Lada Crash፣ 💣 Mines፣ የፈረስ/ውሻ ውድድር እና ፈጣን እጣ አሸናፊ የሆኑ እድለኞች ሽልማታቸው ወዲያውኑ ወደ ዋሌታቸው ገብቷል! 💸\n\n` +
+    `በአዲሱ 🐔 Chicken Road፣ 🚕 Lada Crash፣ 💣 Mines፣ የፈረስ/ውሻ ውድድር እና ፈጣን እጣ አሸናፊ የሆኑ እድለኞች ሽልማታቸው ወዲያውኑ ወደ ዋሌታቸው ገብቷል! 💸\n\n` +
     `${recentWinners}\n\n` +
     `🔥 ቀጣዩ ዙር አሁን ተጀምሯል!\n` +
     `👇 ለመጫወት ከታች ያለውን ቁልፍ ይጫኑ፦`;
@@ -1149,7 +1333,7 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             if (cbData === 'my_invite') {
               const u = db.users[callerId] || { referralsCount: 0, referralEarned: 0 };
               const refLink = `https://t.me/${botUsername || 'Deresegn16Bot'}?start=ref_${callerId}`;
-              const shareText = encodeURIComponent(`🎁 🚕 Lada Crash፣ 💣 Mines፣ የፈረስ/ውሻ ውድድር እና ፈጣን እጣ! አሁኑኑ ሲገቡ የ 10 ብር ነጻ ቦነስ ይሰጣል 👇`);
+              const shareText = encodeURIComponent(`🎁 🐔 Chicken Road፣ 🚕 Lada Crash፣ 💣 Mines፣ የፈረስ/ውሻ ውድድር እና ፈጣን እጣ! አሁኑኑ ሲገቡ የ 10 ብር ነጻ ቦነስ ይሰጣል 👇`);
               const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${shareText}`;
 
               await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
@@ -1423,7 +1607,7 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             for (const uid of unverifiedIds) {
               const ok = await sendMessageToUser(
                 uid,
-                `🎁 የ 10 ብር ነጻ መጫወቻ ቦነስዎ እየጠበቀዎት ነው!\n\nስልክ ቁጥርዎን አረጋግጠው ወዲያውኑ 10 ብር ነጻ ቦነስ ለመውሰድና አዲሱን 🚕 Lada Crash፣ 💣 Mines፣ የፈረስ/ውሻ ውድድር እና ፈጣን እጣ ለመጫወት ከታች ያለውን ቁልፍ ይጫኑ 👇`,
+                `🎁 የ 10 ብር ነጻ መጫወቻ ቦነስዎ እየጠበቀዎት ነው!\n\nስልክ ቁጥርዎን አረጋግጠው ወዲያውኑ 10 ብር ነጻ ቦነስ ለመውሰድና አዲሱን 🐔 Chicken Road፣ 🚕 Lada Crash፣ 💣 Mines፣ የፈረስ/ውሻ ውድድር እና ፈጣን እጣ ለመጫወት ከታች ያለውን ቁልፍ ይጫኑ 👇`,
                 {
                   reply_markup: {
                     keyboard: [
@@ -1444,7 +1628,7 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             if (!db.adminChatId || chatId !== String(db.adminChatId)) continue;
             const broadcastMsg = msg.text.replace(/^\/broadcast\s*/i, '').trim();
             if (!broadcastMsg) {
-              await sendMessageToUser(chatId, `⚠️ የሚላከውን መልዕክት አብረው ይጻፉ!\n\nምሳሌ፦\n/broadcast 🚕 አዲስ Lada Crash ጨዋታ ተጨምሯል! አሁኑኑ ገብተው ይጫወቱ!`);
+              await sendMessageToUser(chatId, `⚠️ የሚላከውን መልዕክት አብረው ይጻፉ!\n\nምሳሌ፦\n/broadcast 🐔 አዲስ Chicken Road ጨዋታ ተጨምሯል! አሁኑኑ ገብተው ይጫወቱ!`);
               continue;
             }
 
@@ -1516,7 +1700,7 @@ if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 chat_id: chatId,
-                text: `🎉 እንኳን ወደ Deresegn Games በደህና መጡ, ${firstName}! 🎉\n\n🚕 Lada Crash • 💣 Mines • 🐎 የፈረስ ውድድር • 🐕 የውሻ ውድድር • 🎲 ፈጣን እጣ\n👇 ከታች ይምረጡ፦`,
+                text: `🎉 እንኳን ወደ Deresegn Games በደህና መጡ, ${firstName}! 🎉\n\n🐔 Chicken Road • 🚕 Lada Crash • 💣 Mines • 🐎 ፈረስ • 🐕 ውሻ • 🎲 ፈጣን እጣ\n👇 ከታች ይምረጡ፦`,
                 reply_markup: {
                   inline_keyboard: [
                     [{ text: "🎮 Play Now", web_app: { url: PUBLIC_URL } }],
