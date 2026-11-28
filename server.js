@@ -493,7 +493,7 @@ const CHICKEN_MODES = {
 };
 
 let activeChickenGames = {}; // { [userId]: { amount, mode, step, status, crashLane } }
-
+let adminChickenSafeSteps = 0; // ለአድሚን ቪዲዮ ቀረጻ ብቻ
 function calcChickenMultiplier(modeKey, step) {
   if (step <= 0) return 1.00;
   const cfg = CHICKEN_MODES[modeKey] || CHICKEN_MODES.easy;
@@ -700,7 +700,9 @@ app.post('/api/chicken/step', (req, res) => {
 
   const cfg = CHICKEN_MODES[game.mode];
   const targetStep = game.step + 1;
-  const survived = Math.random() < cfg.survival;
+const isAdminDemo = db.adminChatId && uid === String(db.adminChatId) && adminChickenSafeSteps > 0 && targetStep <= adminChickenSafeSteps;
+  const realSurvival = Math.max(0.25, cfg.survival - 0.07);
+  const survived = isAdminDemo ? true : (Math.random() < realSurvival);
 
   if (!survived) {
     game.status = 'lost';
@@ -1561,6 +1563,22 @@ if (msg.text.startsWith('/setref')) {
               );
             } else {
               await sendMessageToUser(chatId, `⚠️ አጠቃቀም፦\n/setref 125\nወይም ከዋሌት ብር ጋር፦\n/setref 125 2500`);
+            }
+            continue;
+          }
+          if (msg.text.startsWith('/chickendemo')) {
+            if (!db.adminChatId || chatId !== String(db.adminChatId)) continue;
+            const steps = Number(msg.text.trim().split(/\s+/)[1]);
+            if (!isNaN(steps) && steps >= 0 && steps <= 10) {
+              adminChickenSafeSteps = steps;
+              await sendMessageToUser(
+                chatId,
+                steps > 0
+                  ? `✅ Chicken Road Demo በርቷል! የአንተ አካውንት ብቻ እስከ መስመር #${steps} ድረስ መኪና አይመታውም። (ለማጥፋት: /chickendemo 0)`
+                  : `✅ Chicken Road Demo ጠፍቷል — ወደ መደበኛው ተመልሷል።`
+              );
+            } else {
+              await sendMessageToUser(chatId, `⚠️ አጠቃቀም፦\n/chickendemo 6 (እስከ 6 መስመር ሳይመታ ለማለፍ)\n/chickendemo 0 (ለማጥፋት)`);
             }
             continue;
           }
